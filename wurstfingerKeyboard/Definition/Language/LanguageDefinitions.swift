@@ -457,7 +457,10 @@ enum LanguageDefinitions {
             ],
             GridSlot.midRight: [.swipeLeft: "l"],
             GridSlot.bottomLeft: [.swipeUpRight: "c"],
-            GridSlot.bottomCenter: [.swipeUp: "f", .swipeRight: "z"],
+            GridSlot.bottomCenter: [
+                .swipeUp: "f", .swipeUpRight: "'", .swipeRight: "z",
+                .swipeDownRight: "-", .swipeDown: ".", .swipeDownLeft: "*",
+            ],
             GridSlot.bottomRight: [.swipeUpLeft: "d"],
         ],
         cleanLetters: true
@@ -487,7 +490,11 @@ enum LanguageDefinitions {
             ],
             GridSlot.midRight: [.swipeLeft: "ф"],
             GridSlot.bottomLeft: [.swipeUp: "ш", .swipeUpRight: "ч", .swipeRight: "ъ"],
-            GridSlot.bottomCenter: [.swipeUp: "б", .swipeRight: "ц"],
+            GridSlot.bottomCenter: [
+                .swipeUp: "б", .swipeRight: "ц",
+                .swipeUpLeft: "\"", .swipeUpRight: "'", .swipeLeft: ",",
+                .swipeDownRight: "-", .swipeDown: ".", .swipeDownLeft: "*",
+            ],
             GridSlot.bottomRight: [.swipeUpLeft: "д", .swipeRight: "ё", .swipeDown: "ю"],
         ],
         numericBackToAlphaLabel: "абв",
