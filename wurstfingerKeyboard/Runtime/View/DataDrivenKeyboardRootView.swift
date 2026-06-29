@@ -21,14 +21,27 @@ struct DataDrivenKeyboardRootView: View {
     @AppStorage(SettingsKey.keyboardStyle.rawValue, store: SharedDefaults.store)
     private var keyboardStyle: KeyboardStyle = .classic
 
+    // Read layout settings straight from shared defaults so SwiftUI re-renders
+    // the instant the host app changes them (cross-process), even when the
+    // keyboard extension process is cached and `viewWillAppear` never re-fires.
+    @AppStorage(SettingsKey.keyboardScale.rawValue, store: SharedDefaults.store)
+    private var storedScale: Double = DeviceLayoutUtils.defaultKeyboardScale
+
+    @AppStorage(SettingsKey.keyboardHorizontalPosition.rawValue, store: SharedDefaults.store)
+    private var storedPosition: Double = DeviceLayoutUtils.defaultKeyboardPosition
+
     var body: some View {
         let screenBounds = DeviceLayoutUtils.screenBounds
         let screenShortestSide = min(screenBounds.width, screenBounds.height)
         let currentWidth = overrideWidth ?? viewModel.viewWidth
         let baseWidth = min(currentWidth, screenShortestSide)
-        let scaledWidth = baseWidth * viewModel.keyboardScale
+        // In the in-app preview (overrideWidth set) keep using the view model so
+        // the live sliders drive it; on the real keyboard read the shared store.
+        let effectiveScale = overrideWidth != nil ? viewModel.keyboardScale : storedScale
+        let effectivePosition = overrideWidth != nil ? viewModel.keyboardHorizontalPosition : storedPosition
+        let scaledWidth = baseWidth * effectiveScale
         let availableSpace = currentWidth - scaledWidth
-        let horizontalOffset = availableSpace * (viewModel.keyboardHorizontalPosition - 0.5)
+        let horizontalOffset = availableSpace * (effectivePosition - 0.5)
 
         ZStack {
             keyboardBackground
