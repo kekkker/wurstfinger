@@ -33,7 +33,8 @@ enum GridKeyboardFactory {
         centerCharacters: [[String]],
         directionalOverrides: [String: [GestureType: String]] = [:],
         numericBackToAlphaLabel: String = NumericLayouts.defaultBackToAlphaLabel,
-        inputMethod: InputMethodKind = .direct
+        inputMethod: InputMethodKind = .direct,
+        cleanLetters: Bool = false
     ) -> KeyboardDefinition {
         precondition(
             centerCharacters.count == 3 && centerCharacters.allSatisfy { $0.count == 3 },
@@ -49,8 +50,14 @@ enum GridKeyboardFactory {
             for (colIdx, char) in row.enumerated() {
                 let slotId = GridSlot.allSlots[rowIdx][colIdx]
 
-                // Start with shared defaults for this slot
-                var bindings = CommonKeys.defaultSlotBindings[slotId] ?? [:]
+                // Start with shared defaults for this slot. When the layout wants
+                // clean letter keys (Thumb-Key style), drop the default
+                // punctuation/symbols but keep modifier bindings (shift lives on
+                // midRight) so the shift gestures still work.
+                let slotDefaults = CommonKeys.defaultSlotBindings[slotId] ?? [:]
+                var bindings = cleanLetters
+                    ? slotDefaults.filter { $0.value.category == .modifier }
+                    : slotDefaults
 
                 // Apply language-specific overrides (replace default binding for that gesture).
                 // Letters get an auto-generated uppercase return action.

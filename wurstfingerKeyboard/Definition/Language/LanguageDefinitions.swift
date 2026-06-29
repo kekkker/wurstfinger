@@ -459,7 +459,8 @@ enum LanguageDefinitions {
             GridSlot.bottomLeft: [.swipeUpRight: "c"],
             GridSlot.bottomCenter: [.swipeUp: "f", .swipeRight: "z"],
             GridSlot.bottomRight: [.swipeUpLeft: "d"],
-        ]
+        ],
+        cleanLetters: true
     )
 
     // MARK: - Russian (Thumb-Key)
@@ -489,7 +490,8 @@ enum LanguageDefinitions {
             GridSlot.bottomCenter: [.swipeUp: "б", .swipeRight: "ц"],
             GridSlot.bottomRight: [.swipeUpLeft: "д", .swipeRight: "ё", .swipeDown: "ю"],
         ],
-        numericBackToAlphaLabel: "абв"
+        numericBackToAlphaLabel: "абв",
+        cleanLetters: true
     )
 
     // MARK: - Registry
