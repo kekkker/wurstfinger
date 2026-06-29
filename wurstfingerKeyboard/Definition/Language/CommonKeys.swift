@@ -58,34 +58,23 @@ enum CommonKeys {
         accessibilityLabel: String(localized: "New line")
     )
 
-    /// Clipboard / text-editing swipe bindings shared between the symbols (123)
-    /// key and the numeric back-to-main key. Mirrors Thumb-Key's text-edit key:
-    ///   ↑ copy-all · ↗ cut-all (copy whole message + clear) · → cut selection
-    ///   ↓ paste · ↙ delete-word · ← copy selection
+    /// Clipboard swipe bindings shared between the symbols (123) key and the
+    /// numeric back-to-main key. Mirrors Thumb-Key's text-edit key positions:
+    ///   ↑ copy · ↗ cut · ↓ paste. (Thumb-Key also puts select-all/undo/redo
+    ///   on the other diagonals, but iOS keyboard extensions expose no API for
+    ///   those, so those slots are intentionally left empty.)
     static let clipboardSwipes: [GestureType: KeyBinding] = [
         .swipeUp: KeyBinding(
-            label: "", action: .copyAll, category: .utility,
-            returnAction: nil, accessibilityLabel: String(localized: "Copy all")
+            label: "", action: .copy, category: .utility,
+            returnAction: nil, accessibilityLabel: String(localized: "Copy")
         ),
         .swipeUpRight: KeyBinding(
-            label: "", action: .cutAll, category: .utility,
-            returnAction: nil, accessibilityLabel: String(localized: "Cut all")
-        ),
-        .swipeRight: KeyBinding(
             label: "", action: .cut, category: .utility,
             returnAction: nil, accessibilityLabel: String(localized: "Cut")
         ),
         .swipeDown: KeyBinding(
             label: "", action: .paste, category: .utility,
             returnAction: nil, accessibilityLabel: String(localized: "Paste")
-        ),
-        .swipeDownLeft: KeyBinding(
-            label: "", action: .deleteWord, category: .utility,
-            returnAction: nil, accessibilityLabel: String(localized: "Delete word")
-        ),
-        .swipeLeft: KeyBinding(
-            label: "", action: .copy, category: .utility,
-            returnAction: nil, accessibilityLabel: String(localized: "Copy")
         ),
     ]
 
