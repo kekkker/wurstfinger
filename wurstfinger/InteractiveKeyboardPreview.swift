@@ -112,13 +112,13 @@ struct InteractiveKeyboardPreview: View {
 
                     DataDrivenKeyboardRootView(viewModel: previewViewModel)
 
-                        .onChange(of: aspectRatio) { _, newValue in
+                        .onChange(of: aspectRatio) { newValue in
                             previewViewModel.keyAspectRatio = newValue
                         }
-                        .onChange(of: scale) { _, newValue in
+                        .onChange(of: scale) { newValue in
                             previewViewModel.keyboardScale = newValue
                         }
-                        .onChange(of: position) { _, newValue in
+                        .onChange(of: position) { newValue in
                             previewViewModel.keyboardHorizontalPosition = newValue
                         }
                         .onAppear {

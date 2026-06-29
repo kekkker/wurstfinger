@@ -1,0 +1,73 @@
+name: Unsigned IPA (iOS 16)
+
+# Builds an UNSIGNED .ipa of Wurstfinger + its keyboard extension on a free
+# GitHub-hosted macOS runner. The artifact installs via TrollStore, or can be
+# re-signed with AltStore/SideStore/Sideloadly for a normal sideload.
+#
+# Trigger it manually from the Actions tab ("Run workflow").
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "ios16-*"
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Archive (no code signing)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project wurstfinger.xcodeproj \
+            -scheme Wurstfinger \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Wurstfinger.xcarchive" \
+            archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          ARCHIVE="$RUNNER_TEMP/Wurstfinger.xcarchive"
+          APP_PATH="$(ls -d "$ARCHIVE"/Products/Applications/*.app | head -1)"
+          echo "App: $APP_PATH"
+
+          WORK="$RUNNER_TEMP/ipa"
+          rm -rf "$WORK"
+          mkdir -p "$WORK/Payload"
+          cp -R "$APP_PATH" "$WORK/Payload/"
+
+          # Strip any leftover signature so it's cleanly unsigned.
+          rm -rf "$WORK/Payload/"*.app/_CodeSignature || true
+          for plugin in "$WORK/Payload/"*.app/PlugIns/*.appex; do
+            [ -e "$plugin" ] && rm -rf "$plugin/_CodeSignature" || true
+          done
+
+          ( cd "$WORK" && zip -qry "$RUNNER_TEMP/Wurstfinger-unsigned.ipa" Payload )
+          echo "Built:"
+          ls -lh "$RUNNER_TEMP/Wurstfinger-unsigned.ipa"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Wurstfinger-unsigned-ipa
+          path: ${{ runner.temp }}/Wurstfinger-unsigned.ipa
+          retention-days: 30

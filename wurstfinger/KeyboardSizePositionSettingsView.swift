@@ -14,6 +14,8 @@ struct KeyboardSizePositionSettingsView: View {
     @AppStorage(SettingsKey.keyAspectRatio.rawValue, store: SharedDefaults.store)
     private var keyAspectRatio = DeviceLayoutUtils.defaultKeyAspectRatio
 
+    @State private var previousScale: Double = 0
+
     var body: some View {
         VStack(spacing: 20) {
             // Keyboard Preview
@@ -36,11 +38,13 @@ struct KeyboardSizePositionSettingsView: View {
 
                 VStack(spacing: 8) {
                     Slider(value: $scale, in: 0.25 ... 1.0, step: 0.01)
-                        .onChange(of: scale) { oldValue, newValue in
+                        .onAppear { previousScale = scale }
+                        .onChange(of: scale) { newValue in
                             // Reset position to center when scale reaches 100%
-                            if newValue >= 1.0 && oldValue < 1.0 {
+                            if newValue >= 1.0 && previousScale < 1.0 {
                                 position = 0.5
                             }
+                            previousScale = newValue
                         }
 
                     HStack {
