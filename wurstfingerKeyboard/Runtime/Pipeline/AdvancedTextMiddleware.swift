@@ -43,8 +43,68 @@ struct AdvancedTextMiddleware: ActionMiddleware {
             handlePaste(target: target)
         case .cut:
             handleCut(target: target)
+        case .copyAll:
+            handleCopyAll(target: target)
+        case .cutAll:
+            handleCutAll(target: target)
+        case .deleteWord:
+            handleDeleteWord(target: target)
         default:
             break
+        }
+    }
+
+    // MARK: - Whole-message editing (Thumb-Key style)
+
+    /// Reads the entire document context around the cursor.
+    private func wholeMessage(target: TextInputTarget) -> (before: String, after: String) {
+        (target.documentContextBeforeInput ?? "", target.documentContextAfterInput ?? "")
+    }
+
+    private func handleCopyAll(target: TextInputTarget) {
+        guard target.hasFullAccess else { return }
+        let (before, after) = wholeMessage(target: target)
+        let all = before + after
+        guard !all.isEmpty else { return }
+        UIPasteboard.general.string = all
+    }
+
+    private func handleCutAll(target: TextInputTarget) {
+        let (before, after) = wholeMessage(target: target)
+        let all = before + after
+        guard !all.isEmpty else { return }
+        if target.hasFullAccess {
+            UIPasteboard.general.string = all
+        }
+        // Move past any trailing text, deleting it, then delete everything
+        // before the cursor.
+        for _ in 0 ..< after.count {
+            target.adjustTextPosition(byCharacterOffset: 1)
+            target.deleteBackward()
+        }
+        for _ in 0 ..< before.count {
+            target.deleteBackward()
+        }
+    }
+
+    private func handleDeleteWord(target: TextInputTarget) {
+        guard let context = target.documentContextBeforeInput, !context.isEmpty else { return }
+        // Delete any whitespace adjacent to the cursor, then the word before it.
+        var deleteCount = 0
+        var sawWord = false
+        for character in context.reversed() {
+            if character.isWhitespace, !sawWord {
+                deleteCount += 1 // trailing whitespace right at the cursor
+            } else if !character.isWhitespace {
+                sawWord = true
+                deleteCount += 1
+            } else {
+                break // whitespace before the word — stop
+            }
+        }
+        guard deleteCount > 0 else { return }
+        for _ in 0 ..< deleteCount {
+            target.deleteBackward()
         }
     }
 

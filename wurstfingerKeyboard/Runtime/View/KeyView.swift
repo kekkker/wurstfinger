@@ -222,6 +222,9 @@ struct KeyView: View {
         case .copy: "doc.on.doc"
         case .paste: "doc.on.clipboard"
         case .cut: "scissors"
+        case .copyAll: "doc.on.doc.fill"
+        case .cutAll: "scissors.badge.ellipsis"
+        case .deleteWord: "delete.left.fill"
         case .openEmoji: "face.smiling"
         default: nil
         }

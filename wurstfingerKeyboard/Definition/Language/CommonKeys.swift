@@ -58,19 +58,34 @@ enum CommonKeys {
         accessibilityLabel: String(localized: "New line")
     )
 
-    /// Clipboard swipe bindings shared between the symbols key and numeric back-to-main key.
+    /// Clipboard / text-editing swipe bindings shared between the symbols (123)
+    /// key and the numeric back-to-main key. Mirrors Thumb-Key's text-edit key:
+    ///   ↑ copy-all · ↗ cut-all (copy whole message + clear) · → cut selection
+    ///   ↓ paste · ↙ delete-word · ← copy selection
     static let clipboardSwipes: [GestureType: KeyBinding] = [
         .swipeUp: KeyBinding(
-            label: "", action: .copy, category: .utility,
-            returnAction: nil, accessibilityLabel: String(localized: "Copy")
+            label: "", action: .copyAll, category: .utility,
+            returnAction: nil, accessibilityLabel: String(localized: "Copy all")
         ),
         .swipeUpRight: KeyBinding(
+            label: "", action: .cutAll, category: .utility,
+            returnAction: nil, accessibilityLabel: String(localized: "Cut all")
+        ),
+        .swipeRight: KeyBinding(
             label: "", action: .cut, category: .utility,
             returnAction: nil, accessibilityLabel: String(localized: "Cut")
         ),
         .swipeDown: KeyBinding(
             label: "", action: .paste, category: .utility,
             returnAction: nil, accessibilityLabel: String(localized: "Paste")
+        ),
+        .swipeDownLeft: KeyBinding(
+            label: "", action: .deleteWord, category: .utility,
+            returnAction: nil, accessibilityLabel: String(localized: "Delete word")
+        ),
+        .swipeLeft: KeyBinding(
+            label: "", action: .copy, category: .utility,
+            returnAction: nil, accessibilityLabel: String(localized: "Copy")
         ),
     ]
 

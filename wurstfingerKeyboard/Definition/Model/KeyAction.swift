@@ -55,6 +55,15 @@ enum KeyAction: Codable, Equatable {
     /// Clipboard
     case copy, paste, cut
 
+    /// Copy the whole message to the clipboard (everything before + after cursor).
+    case copyAll
+
+    /// Cut the whole message: copy everything to the clipboard, then delete it.
+    case cutAll
+
+    /// Delete the word immediately before the cursor.
+    case deleteWord
+
     /// No action (empty slot)
     case none
 }
