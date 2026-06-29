@@ -193,6 +193,11 @@ extension KeyboardViewModel {
             return
         }
 
+        if case .openEmoji = binding.action {
+            openEmoji()
+            return
+        }
+
         let context = ActionContext(
             action: binding.action,
             binding: binding,

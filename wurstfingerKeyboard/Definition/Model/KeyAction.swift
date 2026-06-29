@@ -34,6 +34,9 @@ enum KeyAction: Codable, Equatable {
     /// Switch to the next enabled language
     case switchToNextLanguage
 
+    /// Open the scrollable emoji panel
+    case openEmoji
+
     /// Delete backward
     case deleteBackward
 

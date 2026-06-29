@@ -34,7 +34,12 @@ struct DataDrivenKeyboardRootView: View {
             keyboardBackground
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if let mode = viewModel.activeModeFromDefinition,
+            if viewModel.emojiActive {
+                EmojiPanelView(viewModel: viewModel)
+                    .padding(.horizontal, KeyboardConstants.Layout.horizontalPadding)
+                    .padding(.top, KeyboardConstants.Layout.verticalPaddingTop)
+                    .padding(.bottom, KeyboardConstants.Layout.verticalPaddingBottom)
+            } else if let mode = viewModel.activeModeFromDefinition,
                let arrangement = mode.arrangement(for: viewModel.currentContext) {
                 KeyboardGridView(
                     arrangement: arrangement,

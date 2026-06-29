@@ -258,6 +258,34 @@ final class KeyboardViewModel: ObservableObject {
         enabledLanguageIds.count > 1
     }
 
+    // MARK: - Emoji Panel
+
+    /// Whether the scrollable emoji panel is currently shown instead of the grid.
+    @Published var emojiActive: Bool = false
+
+    /// Show the emoji panel.
+    func openEmoji() {
+        emojiActive = true
+    }
+
+    /// Dismiss the emoji panel and return to the alphabetic layer.
+    func closeEmoji() {
+        emojiActive = false
+        switchToMode(ModeNames.main)
+    }
+
+    /// Insert an emoji directly into the document.
+    func insertEmoji(_ emoji: String) {
+        dispatchAction(.commitText(emoji))
+        feedbackTap()
+    }
+
+    /// Backspace from within the emoji panel.
+    func emojiDeleteBackward() {
+        dispatchAction(.deleteBackward)
+        feedbackTap()
+    }
+
     var currentLanguageLabel: String {
         let lang = pipelineLocale?.language.languageCode?.identifier ?? ""
         return lang.uppercased()

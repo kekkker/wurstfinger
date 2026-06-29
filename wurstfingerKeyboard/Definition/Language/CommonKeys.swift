@@ -35,6 +35,11 @@ enum CommonKeys {
             label: "", action: .switchToNextLanguage,
             category: .utility, returnAction: nil, accessibilityLabel: nil
         )
+        bindings[.swipeUp] = KeyBinding(
+            label: "", action: .openEmoji,
+            category: .utility, returnAction: nil,
+            accessibilityLabel: String(localized: "Emoji")
+        )
         return KeyConfig(
             id: UtilitySlot.globe, bindings: bindings,
             swipeMode: .fourWayCross, slideType: .none,
