@@ -57,11 +57,29 @@ jobs:
           mkdir -p "$WORK/Payload"
           cp -R "$APP_PATH" "$WORK/Payload/"
 
-          # Strip any leftover signature so it's cleanly unsigned.
+          # Strip any leftover signature.
           rm -rf "$WORK/Payload/"*.app/_CodeSignature || true
           for plugin in "$WORK/Payload/"*.app/PlugIns/*.appex; do
             [ -e "$plugin" ] && rm -rf "$plugin/_CodeSignature" || true
           done
+
+          # Ad-hoc sign WITH the app-group entitlement embedded. An unsigned
+          # binary loses entitlements, which breaks the shared app group between
+          # the host app and keyboard extension (settings stop syncing). TrollStore
+          # honors ad-hoc signatures carrying custom entitlements, so this keeps
+          # the group intact while remaining install-free of a dev account.
+          APP="$WORK/Payload/$(basename "$APP_PATH")"
+          KB_ENT="$GITHUB_WORKSPACE/wurstfingerKeyboard/wurstfingerKeyboard.entitlements"
+          APP_ENT="$GITHUB_WORKSPACE/wurstfinger/wurstfinger.entitlements"
+
+          for plugin in "$APP/PlugIns/"*.appex; do
+            [ -e "$plugin" ] || continue
+            codesign --force --sign - --entitlements "$KB_ENT" "$plugin"
+          done
+          codesign --force --sign - --entitlements "$APP_ENT" "$APP"
+
+          echo "=== verify app group entitlement ==="
+          codesign -d --entitlements - "$APP" 2>/dev/null | grep -A1 application-groups || true
 
           ( cd "$WORK" && zip -qry "$RUNNER_TEMP/Wurstfinger-unsigned.ipa" Payload )
           echo "Built:"

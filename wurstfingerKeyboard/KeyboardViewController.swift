@@ -118,14 +118,6 @@ final class KeyboardViewController: UIInputViewController {
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         view.backgroundColor = .clear
-        // Re-read settings here as well: when the extension process is cached
-        // and reused, `viewWillAppear` may not fire again, so settings changed
-        // in the host app would otherwise never reach a live keyboard. This
-        // path runs on every (re)appearance and is cheap (no-ops when nothing
-        // changed), keeping scale/aspect/language in sync cross-process.
-        viewModel.reloadSettings()
-        loadDefinitionIfNeeded()
-        updateKeyboardHeight()
         // Update viewModel with current width so SwiftUI re-renders after
         // orientation changes that happen while the keyboard is backgrounded.
         viewModel.updateViewWidth(view.bounds.width)
