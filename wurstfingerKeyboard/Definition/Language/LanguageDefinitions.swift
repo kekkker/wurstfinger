@@ -432,10 +432,72 @@ enum LanguageDefinitions {
         inputMethod: .telex
     )
 
+    // MARK: - English (Thumb-Key)
+
+    /// Faithful port of Thumb-Key's default "english thumb-key" layout.
+    /// Letter positions match Thumb-Key 1:1 so existing muscle memory carries over.
+    static let englishThumbKey = GridKeyboardFactory.layout(
+        id: "en_US_thumbkey",
+        title: "English (Thumb-Key)",
+        localeIdentifier: "en_US",
+        centerCharacters: [
+            ["s", "r", "o"],
+            ["n", "h", "a"],
+            ["t", "i", "e"],
+        ],
+        directionalOverrides: [
+            GridSlot.topLeft: [.swipeDownRight: "w"],
+            GridSlot.topCenter: [.swipeDown: "g"],
+            GridSlot.topRight: [.swipeDownLeft: "u"],
+            GridSlot.midLeft: [.swipeRight: "m"],
+            GridSlot.center: [
+                .swipeUpLeft: "j", .swipeUp: "q", .swipeUpRight: "b",
+                .swipeRight: "p", .swipeDownRight: "y", .swipeDown: "x",
+                .swipeDownLeft: "v", .swipeLeft: "k",
+            ],
+            GridSlot.midRight: [.swipeLeft: "l"],
+            GridSlot.bottomLeft: [.swipeUpRight: "c"],
+            GridSlot.bottomCenter: [.swipeUp: "f", .swipeRight: "z"],
+            GridSlot.bottomRight: [.swipeUpLeft: "d"],
+        ]
+    )
+
+    // MARK: - Russian (Thumb-Key)
+
+    /// Faithful port of Thumb-Key's default "русский thumb-key" layout.
+    static let russianThumbKey = GridKeyboardFactory.layout(
+        id: "ru_RU_thumbkey",
+        title: "Русский (Thumb-Key)",
+        localeIdentifier: "ru_RU",
+        centerCharacters: [
+            ["с", "р", "а"],
+            ["н", "в", "е"],
+            ["т", "и", "о"],
+        ],
+        directionalOverrides: [
+            GridSlot.topLeft: [.swipeRight: "щ", .swipeDownRight: "й", .swipeDown: "э"],
+            GridSlot.topCenter: [.swipeDown: "х"],
+            GridSlot.topRight: [.swipeDownLeft: "ж"],
+            GridSlot.midLeft: [.swipeRight: "м", .swipeDown: "л"],
+            GridSlot.center: [
+                .swipeUpLeft: "я", .swipeUp: "ы", .swipeUpRight: "ь",
+                .swipeRight: "п", .swipeDownRight: "у", .swipeDown: "з",
+                .swipeDownLeft: "г", .swipeLeft: "к",
+            ],
+            GridSlot.midRight: [.swipeLeft: "ф"],
+            GridSlot.bottomLeft: [.swipeUp: "ш", .swipeUpRight: "ч", .swipeRight: "ъ"],
+            GridSlot.bottomCenter: [.swipeUp: "б", .swipeRight: "ц"],
+            GridSlot.bottomRight: [.swipeUpLeft: "д", .swipeRight: "ё", .swipeDown: "ю"],
+        ],
+        numericBackToAlphaLabel: "абв"
+    )
+
     // MARK: - Registry
 
     /// All available language definitions, sorted alphabetically by title.
     static let all: [KeyboardDefinition] = [
+        englishThumbKey,
+        russianThumbKey,
         spanishCatalan,
         croatian,
         english,
