@@ -18,7 +18,7 @@ enum CommonKeys {
         // swipe-left gesture below. The empty `.none` slot keeps the key's
         // accessibility label without re-triggering the globe on a plain tap.
         bindings[.tap] = KeyBinding(
-            label: "", action: .none,
+            label: "🌐", action: .none,
             category: .utility, returnAction: nil,
             accessibilityLabel: String(localized: "Switch keyboard")
         )
