@@ -241,12 +241,28 @@ final class KeyboardViewModel: ObservableObject {
     }
 
     func switchToNextLanguage() {
-        guard enabledLanguageIds.count > 1 else { return }
+        // Always re-read the enabled list straight from shared defaults so a
+        // stale in-memory copy (e.g. after the host app changed it) can't make
+        // this a silent no-op.
+        let stored = LanguageSettings.loadEnabledLanguageIds(from: sharedDefaults) ?? []
+        let validStored = stored.filter { KeyboardRegistry.load(id: $0) != nil }
+
+        // Fallback: if the enabled list isn't usable (empty, single entry, or
+        // failed to sync from the app), cycle through *all* installed layouts
+        // so the globe swipe always advances.
+        let cycle = validStored.count > 1
+            ? validStored
+            : KeyboardRegistry.available.map { $0.id }
+
+        enabledLanguageIds = cycle
+
+        guard cycle.count > 1 else { return }
 
         let currentId = sharedDefaults.string(forKey: SettingsKey.selectedLanguageId.rawValue)
             ?? currentDefinition?.id
+            ?? cycle.first
             ?? "en_US"
-        let nextId = LanguageSettings(userDefaults: sharedDefaults).nextLanguageId(after: currentId)
+        let nextId = LanguageSettings.nextLanguageId(after: currentId, in: cycle)
 
         if nextId != currentId {
             sharedDefaults.set(nextId, forKey: SettingsKey.selectedLanguageId.rawValue)
