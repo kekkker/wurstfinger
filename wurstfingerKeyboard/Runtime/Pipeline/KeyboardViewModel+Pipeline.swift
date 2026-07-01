@@ -63,7 +63,8 @@ extension KeyboardViewModel {
             return
         }
         var baseResolvers: [GestureResolver] = [PrimaryResolver()]
-        if let numericMode = definition.mode(ModeNames.numeric) {
+        if !definition.settings.disableGhostKeys,
+           let numericMode = definition.mode(ModeNames.numeric) {
             baseResolvers.append(GhostKeyResolver(fallbackMode: numericMode))
         }
         resolverChain = GestureResolverChain(resolvers: baseResolvers)

@@ -117,16 +117,24 @@ struct KeyboardDefinitionSettings: Codable, Equatable {
     /// `.direct`; set to `.telex` for Vietnamese Telex composition.
     let inputMethod: InputMethodKind
 
+    /// When true, an empty swipe direction on a letter key does nothing instead
+    /// of falling through to the numeric layer's symbol ("ghost keys"). Clean
+    /// Thumb-Key layouts set this so unlabelled directions can't emit stray
+    /// characters like "<" and cause typos.
+    let disableGhostKeys: Bool
+
     init(
         autoCapitalize: Bool,
         autoCapitalizers: [AutoCapitalizerRule],
         composeRuleOverrides: ComposeRuleSet?,
-        inputMethod: InputMethodKind = .direct
+        inputMethod: InputMethodKind = .direct,
+        disableGhostKeys: Bool = false
     ) {
         self.autoCapitalize = autoCapitalize
         self.autoCapitalizers = autoCapitalizers
         self.composeRuleOverrides = composeRuleOverrides
         self.inputMethod = inputMethod
+        self.disableGhostKeys = disableGhostKeys
     }
 }
 
