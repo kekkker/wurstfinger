@@ -25,9 +25,9 @@ ElleKit must be installed on the Dopamine device. Then copy and install the
 package:
 
 ```sh
-scp packages/de.akator.wurstsecureprobe_1.1.0_iphoneos-arm64.deb mobile@PHONE_IP:/tmp/
+scp packages/de.akator.wurstsecureprobe_1.1.2_iphoneos-arm64.deb mobile@PHONE_IP:/tmp/
 ssh mobile@PHONE_IP
-sudo dpkg -i /tmp/de.akator.wurstsecureprobe_1.1.0_iphoneos-arm64.deb
+sudo dpkg -i /tmp/de.akator.wurstsecureprobe_1.1.2_iphoneos-arm64.deb
 sudo sbreload
 ```
 

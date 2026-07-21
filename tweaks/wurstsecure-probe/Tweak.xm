@@ -1,10 +1,9 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <objc/message.h>
-#import <stdatomic.h>
 
 static NSString *const WFWurstfingerBundleID = @"de.akator.wurstfinger.keyboard";
-static atomic_bool WFSwitchScheduled = false;
+static __strong id WFCachedWurstfingerInputMode = nil;
 
 static id WFSendObject(id object, SEL selector) {
     if (!object || ![object respondsToSelector:selector]) {
@@ -56,6 +55,7 @@ static id WFFindWurstfingerInputMode(id controller) {
         }
         for (id mode in (NSArray *)collection) {
             if (WFIsWurstfingerInputMode(mode)) {
+                WFCachedWurstfingerInputMode = mode;
                 return mode;
             }
         }
@@ -63,23 +63,25 @@ static id WFFindWurstfingerInputMode(id controller) {
     return nil;
 }
 
-static void WFForceKeyboardSwitch(id inputMode) {
-    if (atomic_exchange(&WFSwitchScheduled, true)) {
+static void WFSetKeyboardInputMode(id inputMode) {
+    if (!inputMode) {
         return;
     }
 
-    dispatch_async(dispatch_get_main_queue(), ^{
-        Class implClass = NSClassFromString(@"UIKeyboardImpl");
-        id impl = WFSendObject(implClass, NSSelectorFromString(@"sharedInstance"));
-        SEL selector = NSSelectorFromString(@"setKeyboardInputMode:userInitiated:");
-        if (impl && [impl respondsToSelector:selector]) {
-            ((void (*)(id, SEL, id, BOOL))objc_msgSend)(impl, selector, inputMode, YES);
-        }
+    Class implClass = NSClassFromString(@"UIKeyboardImpl");
+    id impl = WFSendObject(implClass, NSSelectorFromString(@"sharedInstance"));
+    SEL selector = NSSelectorFromString(@"setKeyboardInputMode:userInitiated:");
+    if (impl && [impl respondsToSelector:selector]) {
+        ((void (*)(id, SEL, id, BOOL))objc_msgSend)(impl, selector, inputMode, YES);
+    }
+}
 
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(500 * NSEC_PER_MSEC)),
-                       dispatch_get_main_queue(), ^{
-            atomic_store(&WFSwitchScheduled, false);
-        });
+static void WFForceKeyboardSwitch(id inputMode) {
+    // Queue every responder change. Unlike the old global debounce, rapid taps
+    // cannot suppress the newest request. The setter hook below catches a late
+    // stock-mode assignment without retaining modes in delayed retry blocks.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        WFSetKeyboardInputMode(inputMode);
     });
 }
 
@@ -104,6 +106,16 @@ static void WFForceKeyboardSwitch(id inputMode) {
 
 
 %hook UIKeyboardImpl
+
+- (void)setKeyboardInputMode:(id)inputMode userInitiated:(BOOL)userInitiated {
+    id forcedMode = WFCachedWurstfingerInputMode;
+    if (WFProcessIsSafeForOverride() && forcedMode && inputMode &&
+        !WFIsWurstfingerInputMode(inputMode)) {
+        inputMode = forcedMode;
+        userInitiated = YES;
+    }
+    %orig(inputMode, userInitiated);
+}
 
 - (BOOL)shouldSwitchInputMode:(id)inputMode {
     if (WFProcessIsSafeForOverride() && WFIsWurstfingerInputMode(inputMode)) {
