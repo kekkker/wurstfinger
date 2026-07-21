@@ -42,6 +42,7 @@ extension KeyboardViewModel {
     func bindTextInputTarget(_ target: TextInputTarget) {
         textInputTarget = target
         rebuildPipeline()
+        scheduleSpellcheckRefresh()
     }
 
     /// Injects VC-specific action closures (globe key, dismiss).
@@ -204,7 +205,7 @@ extension KeyboardViewModel {
             binding: binding,
             mode: activeModeName
         )
-        pipeline?.process(context)
+        processAndRefreshSpellcheck(context)
     }
 
     /// Handles a circular gesture. Checks for an explicit binding first
@@ -418,12 +419,17 @@ extension KeyboardViewModel {
     /// Dispatches a raw action through the pipeline (no binding context).
     func dispatchAction(_ action: KeyAction) {
         let context = ActionContext(action: action, binding: nil, mode: activeModeName)
-        pipeline?.process(context)
+        processAndRefreshSpellcheck(context)
     }
 
     /// Dispatches a binding through the pipeline, preserving its category context.
     private func dispatchBinding(_ binding: KeyBinding) {
         let context = ActionContext(action: binding.action, binding: binding, mode: activeModeName)
+        processAndRefreshSpellcheck(context)
+    }
+
+    private func processAndRefreshSpellcheck(_ context: ActionContext) {
         pipeline?.process(context)
+        scheduleSpellcheckRefresh()
     }
 }

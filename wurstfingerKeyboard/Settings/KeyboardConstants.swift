@@ -96,6 +96,8 @@ enum KeyboardConstants {
         static let verticalPaddingTop: CGFloat = 4
         /// Bottom padding - accounts for home indicator safe area on notched devices.
         static let verticalPaddingBottom: CGFloat = 10
+        /// Compact status and correction row above the key grid.
+        static let spellcheckBarHeight: CGFloat = 32
         /// Margin for hint labels from key edges.
         static let hintMargin: CGFloat = 10
         /// Larger margin for "returning" hint labels (swipe-and-return gestures).
@@ -190,7 +192,8 @@ enum KeyboardConstants {
             let keyHeight = keyHeight(aspectRatio: aspectRatio)
             return (keyHeight * CGFloat(KeyDimensions.totalRows)) +
                 (Layout.gridVerticalSpacing * CGFloat(KeyDimensions.totalRows - 1)) +
-                Layout.verticalPaddingTop + Layout.verticalPaddingBottom
+                Layout.verticalPaddingTop + Layout.verticalPaddingBottom +
+                Layout.spellcheckBarHeight
         }
 
         /// Height of the keyboard exactly as rendered by SwiftUI.
@@ -205,7 +208,8 @@ enum KeyboardConstants {
             let fixedSpacing = Layout.gridVerticalSpacing *
                 CGFloat(KeyDimensions.totalRows - 1)
             return scaledKeys + fixedSpacing +
-                Layout.verticalPaddingTop + Layout.verticalPaddingBottom
+                Layout.verticalPaddingTop + Layout.verticalPaddingBottom +
+                Layout.spellcheckBarHeight
         }
     }
 }

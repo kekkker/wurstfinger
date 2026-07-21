@@ -60,18 +60,14 @@ struct InteractiveKeyboardPreview: View {
     }
 
     private var previewHeight: CGFloat {
-        // Calculate preview height based on aspect ratio and scale
-        let baseHeight = KeyboardConstants.Calculations.baseHeight(aspectRatio: previewViewModel.keyAspectRatio)
-        let scaledHeight = baseHeight * scale
-
-        // Determine height constraints based on usage
-        if scale < 0.99 {
-            return min(KeyboardConstants.Preview.maxHeight, max(KeyboardConstants.Preview.minHeight, scaledHeight))
-        } else {
-            let keyHeight = 54.0 * (1.5 / aspectRatio)
-            let totalHeight = (keyHeight * 4) + (8 * 3) + (10 * 2)
-            return min(400, max(200, totalHeight))
-        }
+        let renderedHeight = KeyboardConstants.Calculations.renderedHeight(
+            aspectRatio: previewViewModel.keyAspectRatio,
+            scale: scale
+        )
+        return min(
+            KeyboardConstants.Preview.maxHeight,
+            max(KeyboardConstants.Preview.minHeight, renderedHeight)
+        )
     }
 
     var body: some View {

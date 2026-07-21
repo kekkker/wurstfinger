@@ -10,6 +10,10 @@ On jailbroken devices, the optional WurstSecure companion tweak can remove
 UIKit's bottom keyboard padding for Wurstfinger. The home gesture remains
 active, so the bottom row intentionally sits inside its gesture region.
 
+WurstSecure also enables UIKit's native spell checking for ordinary prose
+fields. Passwords and structured inputs such as email addresses, URLs, phone
+numbers, one-time codes, and card numbers are excluded.
+
 > *References:*
 > - *[Positioning content relative to the safe area](https://developer.apple.com/documentation/uikit/positioning-content-relative-to-the-safe-area) — Apple Developer Documentation*
 > - *[Custom Keyboard Programming Guide](https://developer.apple.com/library/archive/documentation/General/Conceptual/ExtensibilityPG/CustomKeyboard.html) — "a custom keyboard can draw only within the primary view of its UIInputViewController object"*

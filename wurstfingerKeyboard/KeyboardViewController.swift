@@ -127,6 +127,11 @@ final class KeyboardViewController: UIInputViewController {
         viewModel.updateOrientation(isLandscape: detectIsLandscape())
     }
 
+    override func textDidChange(_ textInput: UITextInput?) {
+        super.textDidChange(textInput)
+        viewModel.scheduleSpellcheckRefresh()
+    }
+
     /// Determines whether the host app is currently in a landscape orientation.
     ///
     /// On iPhone, `verticalSizeClass == .compact` is the canonical signal.

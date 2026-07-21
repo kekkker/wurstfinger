@@ -32,7 +32,8 @@ struct KeyboardHeightTests {
         let fixedSpacing = KeyboardConstants.Layout.gridVerticalSpacing *
             CGFloat(KeyboardConstants.KeyDimensions.totalRows - 1) +
             KeyboardConstants.Layout.verticalPaddingTop +
-            KeyboardConstants.Layout.verticalPaddingBottom
+            KeyboardConstants.Layout.verticalPaddingBottom +
+            KeyboardConstants.Layout.spellcheckBarHeight
 
         let rendered = KeyboardConstants.Calculations.renderedHeight(
             aspectRatio: aspectRatio,

@@ -68,6 +68,7 @@ final class KeyboardViewModel: ObservableObject {
     @Published var currentMode: KeyboardMode?
     /// Name of the currently active mode in the data-driven definition.
     @Published var activeModeName: String = ModeNames.main
+    @Published var spellcheckState: SpellcheckState = .idle
 
     // MARK: - Data-Driven Pipeline State (internal for extension access)
 
@@ -141,6 +142,8 @@ final class KeyboardViewModel: ObservableObject {
     var deleteDragResidual: CGFloat = 0
     private var userDefaultsObserver: NSObjectProtocol?
     private var settingsCancellables = Set<AnyCancellable>()
+    let wordChecker: WordChecking = AppleWordChecker()
+    var spellcheckRefreshPending = false
 
     init(
         userDefaults: UserDefaults? = nil,

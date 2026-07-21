@@ -47,31 +47,40 @@ struct DataDrivenKeyboardRootView: View {
             keyboardBackground
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if viewModel.emojiActive {
-                EmojiPanelView(viewModel: viewModel)
+            VStack(spacing: 0) {
+                SpellcheckBar(
+                    state: viewModel.spellcheckState,
+                    onSuggestion: viewModel.acceptSpellcheckSuggestion
+                )
+                .frame(width: scaledWidth, height: KeyboardConstants.Layout.spellcheckBarHeight)
+                .offset(x: horizontalOffset)
+
+                if viewModel.emojiActive {
+                    EmojiPanelView(viewModel: viewModel)
+                        .padding(.horizontal, KeyboardConstants.Layout.horizontalPadding)
+                        .padding(.top, KeyboardConstants.Layout.verticalPaddingTop)
+                        .padding(.bottom, KeyboardConstants.Layout.verticalPaddingBottom)
+                } else if let mode = viewModel.activeModeFromDefinition,
+                   let arrangement = mode.arrangement(for: viewModel.currentContext) {
+                    KeyboardGridView(
+                        arrangement: arrangement,
+                        keys: mode.keys,
+                        onGesture: { key, gesture, isReturn in
+                            viewModel.handleGesture(gesture, keyId: key.id, isReturn: isReturn)
+                        },
+                        onTouchDown: {
+                            viewModel.feedbackTap()
+                        },
+                        onSlide: { key, phase in
+                            viewModel.handleSlide(key, phase: phase)
+                        }
+                    )
                     .padding(.horizontal, KeyboardConstants.Layout.horizontalPadding)
                     .padding(.top, KeyboardConstants.Layout.verticalPaddingTop)
                     .padding(.bottom, KeyboardConstants.Layout.verticalPaddingBottom)
-            } else if let mode = viewModel.activeModeFromDefinition,
-               let arrangement = mode.arrangement(for: viewModel.currentContext) {
-                KeyboardGridView(
-                    arrangement: arrangement,
-                    keys: mode.keys,
-                    onGesture: { key, gesture, isReturn in
-                        viewModel.handleGesture(gesture, keyId: key.id, isReturn: isReturn)
-                    },
-                    onTouchDown: {
-                        viewModel.feedbackTap()
-                    },
-                    onSlide: { key, phase in
-                        viewModel.handleSlide(key, phase: phase)
-                    }
-                )
-                .padding(.horizontal, KeyboardConstants.Layout.horizontalPadding)
-                .padding(.top, KeyboardConstants.Layout.verticalPaddingTop)
-                .padding(.bottom, KeyboardConstants.Layout.verticalPaddingBottom)
-                .frame(width: scaledWidth)
-                .offset(x: horizontalOffset)
+                    .frame(width: scaledWidth)
+                    .offset(x: horizontalOffset)
+                }
             }
         }
         .frame(maxWidth: .infinity)

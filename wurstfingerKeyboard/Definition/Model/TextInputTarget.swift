@@ -35,4 +35,11 @@ protocol TextInputTarget: AnyObject {
     /// Whether Full Access (Open Access) is enabled for the keyboard.
     /// Clipboard operations require this.
     var hasFullAccess: Bool { get }
+
+    /// Whether the current input traits are appropriate for spell checking.
+    var allowsSpellChecking: Bool { get }
+}
+
+extension TextInputTarget {
+    var allowsSpellChecking: Bool { true }
 }

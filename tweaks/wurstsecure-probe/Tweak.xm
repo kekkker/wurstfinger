@@ -36,6 +36,42 @@ static BOOL WFResponderNeedsOverride(id responder) {
     return responder != nil;
 }
 
+static BOOL WFTextInputAllowsSpellChecking(id input) {
+    if (!WFProcessIsSafeForOverride() || !input) {
+        return NO;
+    }
+
+    SEL secureSelector = NSSelectorFromString(@"isSecureTextEntry");
+    if ([input respondsToSelector:secureSelector] &&
+        ((BOOL (*)(id, SEL))objc_msgSend)(input, secureSelector)) {
+        return NO;
+    }
+
+    SEL keyboardTypeSelector = NSSelectorFromString(@"keyboardType");
+    if ([input respondsToSelector:keyboardTypeSelector]) {
+        NSInteger keyboardType =
+            ((NSInteger (*)(id, SEL))objc_msgSend)(input, keyboardTypeSelector);
+        switch (keyboardType) {
+            case UIKeyboardTypeDefault:
+            case UIKeyboardTypeASCIICapable:
+            case UIKeyboardTypeNamePhonePad:
+            case UIKeyboardTypeWebSearch:
+                break;
+            default:
+                return NO;
+        }
+    }
+
+    id contentType = WFSendObject(input, NSSelectorFromString(@"textContentType"));
+    NSArray *excludedContentTypes = @[
+        UITextContentTypeEmailAddress, UITextContentTypeURL,
+        UITextContentTypeTelephoneNumber, UITextContentTypeUsername,
+        UITextContentTypePassword, UITextContentTypeNewPassword,
+        UITextContentTypeOneTimeCode, UITextContentTypeCreditCardNumber
+    ];
+    return !contentType || ![excludedContentTypes containsObject:contentType];
+}
+
 static BOOL WFIsWurstfingerInputMode(id mode) {
     id extension = WFSendObject(mode, NSSelectorFromString(@"extension"));
     id identifier = WFSendObject(extension, NSSelectorFromString(@"identifier"));
@@ -100,6 +136,48 @@ static void WFForceKeyboardSwitch(id inputMode) {
 
     WFForceKeyboardSwitch(wurstfingerMode);
     return wurstfingerMode;
+}
+
+%end
+
+
+%hook UITextField
+
+- (UITextSpellCheckingType)spellCheckingType {
+    if (WFProcessIsSafeForOverride()) {
+        return WFTextInputAllowsSpellChecking(self)
+            ? UITextSpellCheckingTypeYes : UITextSpellCheckingTypeNo;
+    }
+    return %orig;
+}
+
+- (void)setSpellCheckingType:(UITextSpellCheckingType)type {
+    if (WFProcessIsSafeForOverride()) {
+        type = WFTextInputAllowsSpellChecking(self)
+            ? UITextSpellCheckingTypeYes : UITextSpellCheckingTypeNo;
+    }
+    %orig(type);
+}
+
+%end
+
+
+%hook UITextView
+
+- (UITextSpellCheckingType)spellCheckingType {
+    if (WFProcessIsSafeForOverride()) {
+        return WFTextInputAllowsSpellChecking(self)
+            ? UITextSpellCheckingTypeYes : UITextSpellCheckingTypeNo;
+    }
+    return %orig;
+}
+
+- (void)setSpellCheckingType:(UITextSpellCheckingType)type {
+    if (WFProcessIsSafeForOverride()) {
+        type = WFTextInputAllowsSpellChecking(self)
+            ? UITextSpellCheckingTypeYes : UITextSpellCheckingTypeNo;
+    }
+    %orig(type);
 }
 
 %end

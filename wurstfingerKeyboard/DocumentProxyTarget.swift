@@ -53,4 +53,25 @@ final class DocumentProxyTarget: TextInputTarget {
     var hasFullAccess: Bool {
         controller?.hasFullAccess ?? false
     }
+
+    var allowsSpellChecking: Bool {
+        guard let proxy, !proxy.isSecureTextEntry else { return false }
+
+        switch proxy.keyboardType {
+        case .default, .asciiCapable, .namePhonePad, .webSearch:
+            break
+        default:
+            return false
+        }
+
+        let excludedContentTypes: Set<UITextContentType> = [
+            .emailAddress, .URL, .telephoneNumber, .username,
+            .password, .newPassword, .oneTimeCode, .creditCardNumber,
+        ]
+        if let contentType = proxy.textContentType,
+           excludedContentTypes.contains(contentType) {
+            return false
+        }
+        return true
+    }
 }
