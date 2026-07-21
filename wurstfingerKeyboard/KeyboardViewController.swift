@@ -100,10 +100,13 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func updateKeyboardHeight() {
-        // Calculate keyboard height including both aspect ratio and scale
-        let baseHeight = KeyboardConstants.Calculations.baseHeight(aspectRatio: viewModel.keyAspectRatio)
-        // Apply scale to match the visual size from scaleEffect
-        let finalHeight = baseHeight * viewModel.keyboardScale
+        // Keys scale, but SwiftUI's grid gaps and outer padding stay fixed.
+        // Match that rendered geometry exactly so compact layouts are not
+        // clipped at the top by an undersized keyboard host view.
+        let finalHeight = KeyboardConstants.Calculations.renderedHeight(
+            aspectRatio: viewModel.keyAspectRatio,
+            scale: viewModel.keyboardScale
+        )
 
         if let constraint = heightConstraint {
             constraint.constant = finalHeight

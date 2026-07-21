@@ -192,5 +192,20 @@ enum KeyboardConstants {
                 (Layout.gridVerticalSpacing * CGFloat(KeyDimensions.totalRows - 1)) +
                 Layout.verticalPaddingTop + Layout.verticalPaddingBottom
         }
+
+        /// Height of the keyboard exactly as rendered by SwiftUI.
+        ///
+        /// Key views scale with `keyboardScale`, while grid spacing and outer
+        /// padding remain fixed point values. Scaling `baseHeight` as a whole
+        /// makes the host view too short whenever scale is below 1, clipping
+        /// the top row by the unallocated fixed spacing.
+        static func renderedHeight(aspectRatio: CGFloat, scale: CGFloat) -> CGFloat {
+            let scaledKeys = keyHeight(aspectRatio: aspectRatio) *
+                scale * CGFloat(KeyDimensions.totalRows)
+            let fixedSpacing = Layout.gridVerticalSpacing *
+                CGFloat(KeyDimensions.totalRows - 1)
+            return scaledKeys + fixedSpacing +
+                Layout.verticalPaddingTop + Layout.verticalPaddingBottom
+        }
     }
 }

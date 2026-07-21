@@ -105,7 +105,43 @@ static void WFForceKeyboardSwitch(id inputMode) {
 %end
 
 
+%hook UIRemoteKeyboardWindowHosted
+
+- (UIEdgeInsets)safeAreaInsets {
+    UIEdgeInsets insets = %orig;
+    if (WFProcessIsSafeForOverride() && WFCachedWurstfingerInputMode) {
+        insets.bottom = 0.0;
+    }
+    return insets;
+}
+
+%end
+
+
+%hook UIInputWindowController
+
+- (UIEdgeInsets)_viewSafeAreaInsetsFromScene {
+    UIEdgeInsets insets = %orig;
+    if (WFProcessIsSafeForOverride() && WFCachedWurstfingerInputMode) {
+        insets.bottom = 0.0;
+    }
+    return insets;
+}
+
+%end
+
+
 %hook UIKeyboardImpl
+
++ (UIEdgeInsets)deviceSpecificPaddingForInterfaceOrientation:(NSInteger)orientation
+                                                   inputMode:(id)inputMode {
+    UIEdgeInsets padding = %orig;
+    if (WFProcessIsSafeForOverride() &&
+        (WFIsWurstfingerInputMode(inputMode) || WFCachedWurstfingerInputMode)) {
+        padding.bottom = 0.0;
+    }
+    return padding;
+}
 
 - (void)setKeyboardInputMode:(id)inputMode userInitiated:(BOOL)userInitiated {
     id forcedMode = WFCachedWurstfingerInputMode;

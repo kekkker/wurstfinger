@@ -6,6 +6,10 @@ The bar at the bottom of the keyboard is a system-controlled area that iOS displ
 
 This area is managed entirely by iOS — keyboard extensions are placed *above* it and cannot remove, resize, or draw into this space. Third-party keyboards can only draw within the primary view of their `UIInputViewController`.
 
+On jailbroken devices, the optional WurstSecure companion tweak can remove
+UIKit's bottom keyboard padding for Wurstfinger. The home gesture remains
+active, so the bottom row intentionally sits inside its gesture region.
+
 > *References:*
 > - *[Positioning content relative to the safe area](https://developer.apple.com/documentation/uikit/positioning-content-relative-to-the-safe-area) — Apple Developer Documentation*
 > - *[Custom Keyboard Programming Guide](https://developer.apple.com/library/archive/documentation/General/Conceptual/ExtensibilityPG/CustomKeyboard.html) — "a custom keyboard can draw only within the primary view of its UIInputViewController object"*
