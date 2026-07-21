@@ -55,7 +55,7 @@ final class DocumentProxyTarget: TextInputTarget {
     }
 
     var allowsSpellChecking: Bool {
-        guard let proxy, !proxy.isSecureTextEntry else { return false }
+        guard let proxy, proxy.isSecureTextEntry != true else { return false }
 
         switch proxy.keyboardType {
         case .default, .asciiCapable, .namePhonePad, .webSearch:
@@ -68,7 +68,8 @@ final class DocumentProxyTarget: TextInputTarget {
             .emailAddress, .URL, .telephoneNumber, .username,
             .password, .newPassword, .oneTimeCode, .creditCardNumber,
         ]
-        if let contentType = proxy.textContentType,
+        let resolvedContentType = proxy.textContentType ?? nil
+        if let contentType = resolvedContentType,
            excludedContentTypes.contains(contentType) {
             return false
         }
