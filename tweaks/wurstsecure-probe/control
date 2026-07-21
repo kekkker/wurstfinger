@@ -1,0 +1,9 @@
+Package: de.akator.wurstsecureprobe
+Name: WurstSecure
+Version: 1.1.0
+Architecture: iphoneos-arm64
+Description: Forces Wurstfinger for text input across UIKit apps while excluding device passcode UI.
+Maintainer: Wurstfinger
+Author: Wurstfinger
+Section: Tweaks
+Depends: firmware (>= 15.0), mobilesubstrate
