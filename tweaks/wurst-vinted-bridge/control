@@ -1,0 +1,9 @@
+Package: de.akator.wurstvintedbridge
+Name: Wurst Vinted Bridge
+Version: 0.1.0
+Architecture: iphoneos-arm64
+Description: Enables Wurstfinger in Vinted without injecting Vinted.
+Maintainer: akator
+Author: akator
+Section: Tweaks
+Depends: firmware (>= 16.0)

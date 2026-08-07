@@ -15,6 +15,13 @@ final class KeyboardViewController: UIInputViewController {
     private var heightConstraint: NSLayoutConstraint?
     private var documentProxyTarget: DocumentProxyTarget?
 
+    /// Breathing room below the keys. Owned by the extension rather than left
+    /// to the system's bottom inset: the band the system reserves is painted
+    /// with its own gray backdrop, which a third-party keyboard cannot
+    /// recolour. Reserving it here means the gap sits inside this view and
+    /// takes its black background instead.
+    private static let bottomContentGap: CGFloat = 20.0
+
     /// Signature of the definition currently loaded into the pipeline. Used to
     /// skip the expensive rebuild (two resolver chains + 8 middlewares) on every
     /// `viewWillAppear` when nothing that affects the definition changed.
@@ -46,8 +53,15 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Set background immediately to avoid flash
-        view.backgroundColor = .clear
+        // Opaque black, not clear: the SwiftUI content is shorter than the
+        // region iOS hands the extension, and a transparent root lets the
+        // system's gray keyboard backdrop show through in the leftover band.
+        view.backgroundColor = .black
+
+        // Completely disable the gray accessory bar
+        inputAssistantItem.leadingBarButtonGroups = []
+        inputAssistantItem.trailingBarButtonGroups = []
+        inputAssistantItem.allowsHidingShortcuts = true
 
         // Wire up the data-driven pipeline
         let target = DocumentProxyTarget(controller: self)
@@ -103,10 +117,11 @@ final class KeyboardViewController: UIInputViewController {
         // Keys scale, but SwiftUI's grid gaps and outer padding stay fixed.
         // Match that rendered geometry exactly so compact layouts are not
         // clipped at the top by an undersized keyboard host view.
+        // Grow by the gap so reserving it does not squeeze the keys.
         let finalHeight = KeyboardConstants.Calculations.renderedHeight(
             aspectRatio: viewModel.keyAspectRatio,
             scale: viewModel.keyboardScale
-        )
+        ) + Self.bottomContentGap
 
         if let constraint = heightConstraint {
             constraint.constant = finalHeight
@@ -120,7 +135,10 @@ final class KeyboardViewController: UIInputViewController {
 
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
-        view.backgroundColor = .clear
+        view.backgroundColor = .black
+        // Force hide the assistant view on every layout
+        inputAssistantItem.leadingBarButtonGroups = []
+        inputAssistantItem.trailingBarButtonGroups = []
         // Update viewModel with current width so SwiftUI re-renders after
         // orientation changes that happen while the keyboard is backgrounded.
         viewModel.updateViewWidth(view.bounds.width)
@@ -163,7 +181,9 @@ final class KeyboardViewController: UIInputViewController {
             controller.view.topAnchor.constraint(equalTo: view.topAnchor),
             controller.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             controller.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            controller.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            controller.view.bottomAnchor.constraint(
+                equalTo: view.bottomAnchor, constant: -Self.bottomContentGap
+            ),
         ])
 
         controller.didMove(toParent: self)

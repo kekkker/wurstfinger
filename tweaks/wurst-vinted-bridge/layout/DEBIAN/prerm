@@ -1,0 +1,4 @@
+#!/bin/sh
+
+launchctl bootout system/de.akator.wurstvintedbridge >/dev/null 2>&1 || true
+exit 0

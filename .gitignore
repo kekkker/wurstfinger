@@ -34,3 +34,6 @@ Gemfile.lock
 # Claude Code
 .claude/
 AGENTS.md
+
+# Session screenshots
+IMG_*.PNG

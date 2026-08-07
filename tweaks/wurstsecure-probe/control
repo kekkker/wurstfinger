@@ -1,8 +1,8 @@
 Package: de.akator.wurstsecureprobe
 Name: WurstSecure
-Version: 1.2.3
+Version: 1.7.0
 Architecture: iphoneos-arm64
-Description: Forces Wurstfinger across UIKit apps, removes its bottom padding, and enables native spell checking in ordinary text fields.
+Description: Forces Wurstfinger across UIKit apps with native iOS spacing, enables native spell checking, and bridges one-time codes into Wurstfinger's suggestion strip.
 Maintainer: Wurstfinger
 Author: Wurstfinger
 Section: Tweaks
