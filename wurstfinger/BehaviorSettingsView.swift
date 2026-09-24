@@ -56,7 +56,9 @@ struct BehaviorSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Auto-capitalize", isOn: $autoCapitalize)
+                Toggle(isOn: $autoCapitalize) {
+                    labeled("Auto-Capitalize", detail: "Capitalize after sentence-ending punctuation")
+                }
                 Toggle(isOn: $spacebarMultiTaps) {
                     labeled("Space bar multi-taps", detail: "Tap space again for \", \", \". \", \"? \" and more")
                 }

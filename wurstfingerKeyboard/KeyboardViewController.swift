@@ -192,14 +192,21 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     /// Opens the Wurstfinger app. Keyboard extensions have no public API for
-    /// this; the responder chain still reaches the host `UIApplication`.
+    /// this; the responder chain still reaches the host-side `UIApplication`,
+    /// whose `openURL:options:completionHandler:` works (plain `openURL:` is
+    /// ignored for extensions since iOS 17). Called through its implementation
+    /// because the method is marked unavailable for extensions.
     private func openContainingApp(path: String) {
         guard let url = URL(string: "wurstfinger://\(path)") else { return }
-        let selector = NSSelectorFromString("openURL:")
+        typealias OpenURL = @convention(c) (
+            NSObject, Selector, NSURL, NSDictionary, (@convention(block) (Bool) -> Void)?
+        ) -> Void
+        let selector = NSSelectorFromString("openURL:options:completionHandler:")
         var responder: UIResponder? = self
         while let current = responder {
-            if current.responds(to: selector), current !== self {
-                current.perform(selector, with: url)
+            if current !== self, current.responds(to: selector), let implementation = current.method(for: selector) {
+                let open = unsafeBitCast(implementation, to: OpenURL.self)
+                open(current, selector, url as NSURL, NSDictionary(), nil)
                 return
             }
             responder = current.next

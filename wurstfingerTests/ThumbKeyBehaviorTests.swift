@@ -188,8 +188,11 @@ struct StartingLayerTests {
     }
 
     @Test func emptySentenceFieldStartsShifted() {
-        let (vm, _) = makeViewModel(languageId: "en_US_thumbkey", autoCapitalize: true)
-        vm.resetModeForCurrentField()
+        let (vm, target) = makeViewModel(languageId: "en_US_thumbkey", autoCapitalize: true)
+        // The view model holds the target weakly.
+        withExtendedLifetime(target) {
+            vm.resetModeForCurrentField()
+        }
         #expect(vm.activeModeName == ModeNames.shifted)
     }
 
@@ -275,11 +278,14 @@ struct UtilityActionTests {
     }
 
     @Test func undoGoesThroughBridge() {
-        let (vm, _) = makeViewModel(languageId: "en_US_thumbkey")
+        let (vm, target) = makeViewModel(languageId: "en_US_thumbkey")
         let bridge = MockTextCommandBridge()
         vm.textCommandBridge = bridge
-        vm.handleKeyEvent(outcome(.swipeDownLeft), keyId: UtilitySlot.symbols)
-        vm.handleKeyEvent(outcome(.swipeDownRight), keyId: UtilitySlot.symbols)
+        // The view model holds the target weakly.
+        withExtendedLifetime(target) {
+            vm.handleKeyEvent(outcome(.swipeDownLeft), keyId: UtilitySlot.symbols)
+            vm.handleKeyEvent(outcome(.swipeDownRight), keyId: UtilitySlot.symbols)
+        }
         #expect(bridge.sent == [.undo, .redo])
     }
 }
