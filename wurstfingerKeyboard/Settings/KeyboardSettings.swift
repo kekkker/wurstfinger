@@ -73,6 +73,9 @@ enum SettingsKey: String, CaseIterable {
 
     // Emoji
     case recentEmoji
+
+    // Thumb-Key "Modify keys" YAML
+    case keyModifications
 }
 
 // MARK: - Behavior Settings

@@ -33,6 +33,22 @@ struct KeyBinding: Codable, Equatable {
     var resolvedCategory: KeyCategory {
         category ?? action.inferredCategory
     }
+
+    /// A copy with a different swipe-return action.
+    func with(returnAction: KeyAction?) -> KeyBinding {
+        KeyBinding(
+            label: label, action: action, category: category,
+            returnAction: returnAction, accessibilityLabel: accessibilityLabel, legend: legend
+        )
+    }
+
+    /// A copy with a different label and legend.
+    func with(label: String, legend: KeyLegend?) -> KeyBinding {
+        KeyBinding(
+            label: label, action: action, category: category,
+            returnAction: returnAction, accessibilityLabel: accessibilityLabel, legend: legend
+        )
+    }
 }
 
 /// Explicit appearance of a binding's legend, mirroring Thumb-Key's

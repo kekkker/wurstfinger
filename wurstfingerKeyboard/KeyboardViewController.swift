@@ -114,7 +114,8 @@ final class KeyboardViewController: UIInputViewController {
             forKey: SettingsKey.numpadStyle.rawValue
         ) ?? ""
         let lettersAfterSpace = viewModel.behaviorSettings.switchToLettersAfterSpace
-        let signature = "\(languageId)|\(numpadStyle)|\(lettersAfterSpace)"
+        let modifications = SharedDefaults.store.string(forKey: SettingsKey.keyModifications.rawValue) ?? ""
+        let signature = "\(languageId)|\(numpadStyle)|\(lettersAfterSpace)|\(modifications)"
         guard signature != loadedDefinitionSignature else { return }
         // Cache the signature only after a successful load so a failed lookup
         // does not suppress future reload attempts.
@@ -202,9 +203,12 @@ final class KeyboardViewController: UIInputViewController {
             NSObject, Selector, NSURL, NSDictionary, (@convention(block) (Bool) -> Void)?
         ) -> Void
         let selector = NSSelectorFromString("openURL:options:completionHandler:")
+        // UIScene has a method with the same selector but a different options
+        // type, so only the application may receive this call.
+        guard let applicationClass = NSClassFromString("UIApplication") else { return }
         var responder: UIResponder? = self
         while let current = responder {
-            if current !== self, current.responds(to: selector), let implementation = current.method(for: selector) {
+            if current.isKind(of: applicationClass), let implementation = current.method(for: selector) {
                 let open = unsafeBitCast(implementation, to: OpenURL.self)
                 open(current, selector, url as NSURL, NSDictionary(), nil)
                 return

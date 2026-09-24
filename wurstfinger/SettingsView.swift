@@ -136,6 +136,9 @@ struct SettingsView: View {
             NavigationLink(destination: ClipboardSettingsView()) {
                 SettingsRow(icon: "doc.on.clipboard", color: .brown, title: "Clipboard")
             }
+            NavigationLink(destination: ModifyKeysSettingsView()) {
+                SettingsRow(icon: "character.cursor.ibeam", color: .indigo, title: "Modify keys")
+            }
             NavigationLink(destination: BackupSettingsView()) {
                 SettingsRow(icon: "externaldrive", color: .gray, title: "Backup and restore")
             }

@@ -40,6 +40,13 @@ extension KeyboardViewModel {
             result = result.replacingMode(ModeNames.numeric, with: classicNumeric)
         }
 
+        // The user's key modifications. A broken config leaves the layout
+        // unchanged; the settings screen shows the error.
+        let modifications = sharedDefaults.string(forKey: SettingsKey.keyModifications.rawValue) ?? ""
+        if let modified = try? KeyModifications.apply(modifications, to: result) {
+            result = modified
+        }
+
         // Thumb-Key's "switch to letters after space" on the number layer.
         if behaviorSettings.switchToLettersAfterSpace, let numeric = result.mode(ModeNames.numeric) {
             result = result.replacingMode(
