@@ -88,7 +88,7 @@ final class DocumentProxyTarget: TextInputTarget {
     }
 
     var documentIdentifier: UUID? {
-        proxy?.documentIdentifier
+        proxy?.optionalDocumentIdentifier
     }
 
     var allowsSpellChecking: Bool {
@@ -111,5 +111,14 @@ final class DocumentProxyTarget: TextInputTarget {
             return false
         }
         return true
+    }
+}
+
+extension UITextDocumentProxy {
+    /// `documentIdentifier` is declared non-optional, yet it is nil until the
+    /// host connects, and bridging that nil to `UUID` traps. Reading it
+    /// through Objective-C keeps nil as nil.
+    var optionalDocumentIdentifier: UUID? {
+        (self as? NSObject)?.value(forKey: "documentIdentifier") as? UUID
     }
 }

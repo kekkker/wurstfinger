@@ -99,7 +99,7 @@ final class KeyboardViewController: UIInputViewController {
         loadDefinitionIfNeeded()
         updateKeyboardHeight()
         viewModel.clipboardHistory.captureSystemPasteboard()
-        currentDocumentIdentifier = textDocumentProxy.documentIdentifier
+        currentDocumentIdentifier = textDocumentProxy.optionalDocumentIdentifier
         viewModel.resetModeForCurrentField()
     }
 
@@ -162,7 +162,7 @@ final class KeyboardViewController: UIInputViewController {
         super.textDidChange(textInput)
         viewModel.scheduleSpellcheckRefresh()
         viewModel.clipboardHistory.captureSystemPasteboard()
-        let documentIdentifier = textDocumentProxy.documentIdentifier
+        let documentIdentifier = textDocumentProxy.optionalDocumentIdentifier
         if documentIdentifier != currentDocumentIdentifier {
             currentDocumentIdentifier = documentIdentifier
             viewModel.resetModeForCurrentField()
