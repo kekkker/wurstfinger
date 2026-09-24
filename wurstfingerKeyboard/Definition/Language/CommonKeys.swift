@@ -134,8 +134,10 @@ enum CommonKeys {
     static let spacebar = KeyConfig(
         id: UtilitySlot.space,
         bindings: [
+            // Category inferred as whitespace, so "switch to letters after
+            // space" applies.
             .tap: KeyBinding(
-                label: "␣", action: .space, category: .utility,
+                label: "␣", action: .space, category: nil,
                 returnAction: nil, accessibilityLabel: String(localized: "Space")
             ),
             .swipeLeft: hiddenBinding(.moveCursor(offset: -1)),

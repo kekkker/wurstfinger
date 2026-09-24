@@ -182,10 +182,13 @@ final class KeyboardViewController: UIInputViewController {
         let color = defaults.string(forKey: SettingsKey.themeColor.rawValue).flatMap(ThemeColor.init) ?? .system
         let systemScheme: ColorScheme = traitCollection.userInterfaceStyle == .dark ? .dark : .light
         let scheme = KeyboardPalette.colorScheme(mode: mode, scheme: systemScheme)
-        let palette = KeyboardPalette.resolve(color: color, mode: mode, scheme: systemScheme)
-        view.backgroundColor = UIColor(palette.background).resolvedColor(
-            with: UITraitCollection(userInterfaceStyle: scheme == .dark ? .dark : .light)
-        )
+        let traits = UITraitCollection(userInterfaceStyle: scheme == .dark ? .dark : .light)
+        // UIColor(Color) resolves dynamic system colors for light mode, so the
+        // system theme uses the UIKit color directly.
+        let background = color == .system
+            ? UIColor.systemBackground
+            : UIColor(KeyboardPalette.resolve(color: color, mode: mode, scheme: systemScheme).background)
+        view.backgroundColor = background.resolvedColor(with: traits)
     }
 
     /// Opens the Wurstfinger app. Keyboard extensions have no public API for

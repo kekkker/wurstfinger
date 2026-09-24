@@ -102,7 +102,8 @@ struct DataDrivenKeyboardRootView: View {
 
                 SpellcheckBar(
                     state: viewModel.spellcheckState,
-                    onSuggestion: viewModel.acceptSpellcheckSuggestion
+                    onSuggestion: viewModel.acceptSpellcheckSuggestion,
+                    palette: palette
                 )
                 .frame(width: scaledWidth, height: KeyboardConstants.Layout.spellcheckBarHeight)
                 .offset(x: keyboardSplit ? 0 : horizontalOffset)

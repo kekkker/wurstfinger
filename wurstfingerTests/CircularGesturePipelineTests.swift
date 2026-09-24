@@ -2,8 +2,8 @@
 //  CircularGesturePipelineTests.swift
 //  WurstfingerTests
 //
-//  Tests for KeyboardViewModel's circular-gesture handling (handleCircular /
-//  tryCircularUppercase / dispatchBinding), driven end-to-end through the
+//  Tests for KeyboardViewModel's circular-gesture handling (explicit circle
+//  bindings, opposite-case and number-key circles), driven end-to-end through the
 //  data-driven pipeline via makeViewModel + MockTextTarget.
 //
 
@@ -32,23 +32,30 @@ struct CircularGesturePipelineTests {
         #expect(target.events.contains(.insertText(letter.uppercased(with: vm.pipelineLocale ?? .current))))
     }
 
-    /// Counterclockwise uses the same uppercase fallback (exercises the
-    /// opposite-direction computation too).
-    @Test func counterclockwiseOnLetterKeyInsertsUppercase() {
+    /// Counterclockwise types the number-layer key at the same position
+    /// (Thumb-Key's default circle action).
+    @Test func counterclockwiseOnLetterKeyInsertsNumber() {
         let (vm, target) = makeViewModel(languageId: "de_DE")
-
-        guard let key = vm.activeModeFromDefinition?.key(for: GridSlot.topLeft),
-              case let .commitText(letter) = key.bindings[.tap]?.action
-        else {
-            Issue.record("Expected topLeft to be a letter key")
-            return
-        }
 
         vm.handleGesture(.circularCounterclockwise, keyId: GridSlot.topLeft, isReturn: false)
 
-        // Match production: tryCircularUppercase uppercases with the pipeline
-        // locale, so locale-sensitive letters can't drift from the assertion.
-        #expect(target.events.contains(.insertText(letter.uppercased(with: vm.pipelineLocale ?? .current))))
+        #expect(target.events == [.insertText("1")])
+    }
+
+    /// The circle actions follow the settings.
+    @Test func circleActionsFollowSettings() {
+        let (vm, target) = makeViewModel(
+            languageId: "de_DE",
+            settings: [
+                .clockwiseDragAction: CircularDragAction.numeric.rawValue,
+                .counterclockwiseDragAction: CircularDragAction.oppositeCase.rawValue,
+            ]
+        )
+
+        vm.handleGesture(.circularClockwise, keyId: GridSlot.topLeft, isReturn: false)
+        vm.handleGesture(.circularCounterclockwise, keyId: GridSlot.topLeft, isReturn: false)
+
+        #expect(target.events == [.insertText("1"), .insertText("A")])
     }
 
     /// Path 1: numeric layer keys carry an explicit circular binding
