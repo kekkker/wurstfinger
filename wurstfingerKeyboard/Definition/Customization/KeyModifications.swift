@@ -240,7 +240,8 @@ enum KeyModifications {
         var values: [String: String] = [:]
         for (property, value) in entries {
             guard bindingProperties.contains(property) else {
-                throw KeyModificationError(description: String(localized: "Unknown property \(path).\(property)."))
+                let location = "\(path).\(property)"
+                throw KeyModificationError(description: String(localized: "Unknown property \(location)."))
             }
             values[property] = value.scalar ?? ""
         }

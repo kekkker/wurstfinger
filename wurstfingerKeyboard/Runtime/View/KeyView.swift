@@ -69,17 +69,22 @@ struct KeyView: View {
             let padding = CGFloat(look.settings.keyPadding)
             let width = max(0, proxy.size.width - 2 * padding)
             let keyHeight = max(0, proxy.size.height - 2 * padding)
-            let borderWidth = CGFloat(look.settings.keyBorderWidth / 10)
+            // Thin borders are drawn at least one pixel wide; thinner strokes only
+            // show up where they curve.
+            let setting = CGFloat(look.settings.keyBorderWidth / 10)
+            let borderWidth = setting > 0 ? max(setting, 1 / displayScale) : 0
             // Thumb-Key sizes legends from the average of one column's width and the height.
             let keySize = max(0, (width / spanRatio + keyHeight) / 2 - borderWidth)
 
+            let unitWidth = width / spanRatio
+
             ZStack {
-                background(width: width, height: keyHeight, borderWidth: borderWidth)
+                background(width: unitWidth, height: keyHeight, borderWidth: borderWidth)
                 legends(keySize: keySize, borderWidth: borderWidth)
                 pressAnimation(keySize: keySize, height: keyHeight)
             }
             .frame(width: width, height: keyHeight)
-            .clipShape(keyShape(width: width, height: keyHeight))
+            .clipShape(keyShape(width: unitWidth, height: keyHeight))
             .padding(padding)
             .contentShape(Rectangle())
             .modifier(KeyTouchHandler(
@@ -119,8 +124,10 @@ struct KeyView: View {
 
     // MARK: - Background
 
-    private func keyShape(width: CGFloat, height: CGFloat) -> RoundedRectangle {
-        RoundedRectangle(cornerRadius: CGFloat(look.settings.keyRadius / 100) * (width + height) / 4)
+    /// The key's outline. Like Thumb-Key, the corner radius comes from one
+    /// column's width, so wide keys get the same corners as the others.
+    private func keyShape(width unitWidth: CGFloat, height: CGFloat) -> RoundedRectangle {
+        RoundedRectangle(cornerRadius: CGFloat(look.settings.keyRadius / 100) * (unitWidth + height) / 4)
     }
 
     @ViewBuilder
@@ -149,6 +156,13 @@ struct KeyView: View {
     private enum LegendContent {
         case text(String, Color)
         case icon(String, Color)
+
+        var isWideText: Bool {
+            if case let .text(text, _) = self {
+                return text.count > 2
+            }
+            return false
+        }
     }
 
     private static let legendAlignments: [(GestureType, Alignment)] = [
@@ -178,7 +192,9 @@ struct KeyView: View {
                 }
             }
             if let content = centerLegend {
-                legendView(content, size: keySize / 2.5)
+                // Thumb-Key's LARGE size; labels like "123" use MEDIUM so they
+                // stay clear of the swipe legends, like Thumb-Key's square icons.
+                legendView(content, size: keySize / (content.isWideText ? 3.5 : 2.5))
             }
         }
     }
