@@ -134,11 +134,14 @@ final class KeyboardViewController: UIInputViewController {
         let bottomOffset = CGFloat(defaults.double(forKey: SettingsKey.bottomOffset.rawValue))
         let finalHeight = KeyboardConstants.Calculations.renderedHeight(
             aspectRatio: viewModel.keyAspectRatio,
-            scale: viewModel.keyboardScale
+            scale: viewModel.keyboardScale,
+            rows: viewModel.currentArrangement?.rows.count ?? KeyboardConstants.KeyDimensions.totalRows
         ) + backdrop + bottomOffset + Self.bottomContentGap
 
         if let constraint = heightConstraint {
-            constraint.constant = finalHeight
+            if constraint.constant != finalHeight {
+                constraint.constant = finalHeight
+            }
         } else {
             let constraint = view.heightAnchor.constraint(equalToConstant: finalHeight)
             constraint.priority = .defaultHigh
@@ -156,7 +159,12 @@ final class KeyboardViewController: UIInputViewController {
         // Update viewModel with current width so SwiftUI re-renders after
         // orientation changes that happen while the keyboard is backgrounded.
         viewModel.updateViewWidth(view.bounds.width)
-        viewModel.updateOrientation(isLandscape: detectIsLandscape())
+        let isLandscape = detectIsLandscape()
+        if isLandscape != viewModel.isLandscape {
+            viewModel.updateOrientation(isLandscape: isLandscape)
+            // Landscape arrangements have fewer rows.
+            updateKeyboardHeight()
+        }
     }
 
     override func textDidChange(_ textInput: UITextInput?) {

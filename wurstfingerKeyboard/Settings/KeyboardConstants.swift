@@ -94,11 +94,12 @@ enum KeyboardConstants {
         /// padding remain fixed point values. Scaling `baseHeight` as a whole
         /// makes the host view too short whenever scale is below 1, clipping
         /// the top row by the unallocated fixed spacing.
-        static func renderedHeight(aspectRatio: CGFloat, scale: CGFloat) -> CGFloat {
+        /// `rows` is the current arrangement's row count (landscape has 3).
+        static func renderedHeight(aspectRatio: CGFloat, scale: CGFloat, rows: Int = KeyDimensions.totalRows) -> CGFloat {
             let scaledKeys = keyHeight(aspectRatio: aspectRatio) *
-                scale * CGFloat(KeyDimensions.totalRows)
+                scale * CGFloat(rows)
             let fixedSpacing = Layout.gridVerticalSpacing *
-                CGFloat(KeyDimensions.totalRows - 1)
+                CGFloat(rows - 1)
             return scaledKeys + fixedSpacing +
                 Layout.verticalPaddingTop + Layout.verticalPaddingBottom +
                 Layout.spellcheckBarHeight

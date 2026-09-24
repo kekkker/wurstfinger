@@ -206,3 +206,40 @@ struct KeyViewStyleTests {
         #expect(view.accessibilityLabel == "Löschen")
     }
 }
+
+// MARK: - Grid Positions
+
+struct KeyboardGridCellTests {
+    /// Every grid cell is covered by exactly one key, spans included.
+    private func coverage(_ arrangement: GridArrangement) -> [[Int]] {
+        var counts = Array(repeating: Array(repeating: 0, count: arrangement.columns), count: arrangement.rows.count)
+        for cell in KeyboardGridView.cells(for: arrangement) {
+            for row in cell.row ..< cell.row + cell.placement.heightMultiplier {
+                for column in cell.column ..< cell.column + cell.placement.widthMultiplier {
+                    counts[row][column] += 1
+                }
+            }
+        }
+        return counts
+    }
+
+    @Test func landscapeReturnSpansIntoTheRowBelow() throws {
+        let landscape = try #require(StandardArrangements.grid3x3[.landscape])
+        let cells = KeyboardGridView.cells(for: landscape)
+        let returnCell = try #require(cells.first { $0.placement.keyId == UtilitySlot.return })
+        #expect(returnCell.row == 1)
+        #expect(returnCell.column == 4)
+        let bottomRight = try #require(cells.first { $0.placement.keyId == GridSlot.bottomRight })
+        #expect(bottomRight.row == 2)
+        #expect(bottomRight.column == 3)
+    }
+
+    @Test func standardArrangementsCoverEveryCellOnce() {
+        let arrangements = Array(StandardArrangements.grid3x3.values)
+            + Array(StandardArrangements.numeric3x3.values)
+            + Array(StandardArrangements.numericThumbKey.values)
+        for arrangement in arrangements {
+            #expect(coverage(arrangement).allSatisfy { row in row.allSatisfy { $0 == 1 } }, "\(arrangement)")
+        }
+    }
+}

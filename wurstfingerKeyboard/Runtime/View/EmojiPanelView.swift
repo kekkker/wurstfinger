@@ -29,6 +29,7 @@ struct EmojiCategory: Identifiable {
 /// The emoji picker shown in place of the keyboard grid.
 struct EmojiPanelView: View {
     @ObservedObject var viewModel: KeyboardViewModel
+    /// Height of each of the four side keys; together they fill the panel.
     let keyHeight: CGFloat
     let look: KeyLook
 

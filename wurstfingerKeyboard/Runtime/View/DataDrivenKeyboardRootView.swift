@@ -90,6 +90,8 @@ struct DataDrivenKeyboardRootView: View {
         let availableSpace = currentWidth - scaledWidth
         let horizontalOffset = availableSpace * (effectivePosition - 0.5)
         let keyHeight = KeyboardConstants.Calculations.keyHeight(aspectRatio: aspectRatio) * effectiveScale
+        // Panels shown instead of the keys take the keys' height.
+        let rows = viewModel.currentArrangement?.rows.count ?? KeyboardConstants.KeyDimensions.totalRows
         let palette = resolvedPalette
 
         ZStack(alignment: .top) {
@@ -113,13 +115,13 @@ struct DataDrivenKeyboardRootView: View {
                 .offset(x: keyboardSplit ? 0 : horizontalOffset)
 
                 if viewModel.emojiActive {
-                    EmojiPanelView(viewModel: viewModel, keyHeight: keyHeight, look: look(palette))
-                        .frame(height: keyHeight * CGFloat(KeyboardConstants.KeyDimensions.totalRows))
+                    EmojiPanelView(viewModel: viewModel, keyHeight: keyHeight * CGFloat(rows) / 4, look: look(palette))
+                        .frame(height: keyHeight * CGFloat(rows))
                         .frame(width: keyboardSplit ? currentWidth : scaledWidth)
                         .offset(x: keyboardSplit ? 0 : horizontalOffset)
                 } else if viewModel.clipboardActive {
                     ClipboardPanelView(viewModel: viewModel, history: viewModel.clipboardHistory, palette: palette)
-                        .frame(height: keyHeight * CGFloat(KeyboardConstants.KeyDimensions.totalRows))
+                        .frame(height: keyHeight * CGFloat(rows))
                         .frame(width: keyboardSplit ? currentWidth : scaledWidth)
                         .offset(x: keyboardSplit ? 0 : horizontalOffset)
                 } else if keyboardSplit {

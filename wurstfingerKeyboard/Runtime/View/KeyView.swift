@@ -50,8 +50,9 @@ struct KeyView: View {
     let look: KeyLook
     /// Key height in points.
     let height: CGFloat
-    /// Width in grid columns over height in rows (e.g. 3 for the space bar).
-    var spanRatio: CGFloat = 1.0
+    /// Grid columns and rows the key spans (e.g. 3 columns for the space bar).
+    var columnSpan: CGFloat = 1
+    var rowSpan: CGFloat = 1
     let makeGestureConfig: (KeyConfig, CGFloat) -> KeyGestureConfig
     let onTouchDown: () -> Void
     /// Handles a gesture event and returns the action it performed.
@@ -73,18 +74,18 @@ struct KeyView: View {
             // show up where they curve.
             let setting = CGFloat(look.settings.keyBorderWidth / 10)
             let borderWidth = setting > 0 ? max(setting, 1 / displayScale) : 0
-            // Thumb-Key sizes legends from the average of one column's width and the height.
-            let keySize = max(0, (width / spanRatio + keyHeight) / 2 - borderWidth)
-
-            let unitWidth = width / spanRatio
+            // Thumb-Key sizes legends from the average of one cell's width and height.
+            let unitWidth = width / columnSpan
+            let unitHeight = keyHeight / rowSpan
+            let keySize = max(0, (unitWidth + unitHeight) / 2 - borderWidth)
 
             ZStack {
-                background(width: unitWidth, height: keyHeight, borderWidth: borderWidth)
+                background(width: unitWidth, height: unitHeight, borderWidth: borderWidth)
                 legends(keySize: keySize, borderWidth: borderWidth)
                 pressAnimation(keySize: keySize, height: keyHeight)
             }
             .frame(width: width, height: keyHeight)
-            .clipShape(keyShape(width: unitWidth, height: keyHeight))
+            .clipShape(keyShape(width: unitWidth, height: unitHeight))
             .padding(padding)
             .contentShape(Rectangle())
             .modifier(KeyTouchHandler(
@@ -125,9 +126,9 @@ struct KeyView: View {
     // MARK: - Background
 
     /// The key's outline. Like Thumb-Key, the corner radius comes from one
-    /// column's width, so wide keys get the same corners as the others.
-    private func keyShape(width unitWidth: CGFloat, height: CGFloat) -> RoundedRectangle {
-        RoundedRectangle(cornerRadius: CGFloat(look.settings.keyRadius / 100) * (unitWidth + height) / 4)
+    /// cell's size, so wide and tall keys get the same corners as the others.
+    private func keyShape(width unitWidth: CGFloat, height unitHeight: CGFloat) -> RoundedRectangle {
+        RoundedRectangle(cornerRadius: CGFloat(look.settings.keyRadius / 100) * (unitWidth + unitHeight) / 4)
     }
 
     @ViewBuilder
