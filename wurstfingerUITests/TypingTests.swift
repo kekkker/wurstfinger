@@ -96,9 +96,9 @@ final class TypingTests: XCTestCase {
         start.press(forDuration: 0.05, thenDragTo: end)
     }
 
-    /// Horizontal drag across the space bar (moves the cursor). Negative dx
-    /// is left. The press duration lets the slide gesture engage before the
-    /// drag, so XCUITest emits interpolated move events.
+    /// Horizontal drag across the space bar (a cursor swipe). Negative dx
+    /// is left. The press duration makes XCUITest emit interpolated move
+    /// events, so the gesture is classified from a real path.
     private func dragSpace(dx: CGFloat) {
         let space = key("space")
         let start = space.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
@@ -244,7 +244,7 @@ final class TypingTests: XCTestCase {
         let c3 = tapKey("topRight")
         assertTypedText(equals: c1 + c2 + c3)
 
-        dragSpace(dx: -120) // move cursor left (several steps)
+        dragSpace(dx: -120) // swipe left on space: cursor one character left
 
         let inserted = tapKey("midLeft")
 
