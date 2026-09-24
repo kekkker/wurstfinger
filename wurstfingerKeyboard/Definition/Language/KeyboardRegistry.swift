@@ -24,7 +24,9 @@ enum KeyboardRegistry {
 
     /// Loads the full definition for a keyboard ID, caching the result.
     static func load(id: String) -> KeyboardDefinition? {
-        if let cached = cache[id] { return cached }
+        if let cached = cache[id] {
+            return cached
+        }
         guard let definition = definitionsByID[id] else {
             return nil
         }

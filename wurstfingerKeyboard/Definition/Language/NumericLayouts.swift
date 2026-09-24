@@ -187,7 +187,9 @@ enum NumericLayouts {
                 // (e.g. midRight.swipeUp carries capitalizeWord as returnAction).
                 var bindings: [GestureType: KeyBinding] = [:]
                 for (gesture, binding) in CommonKeys.defaultSlotBindings[slotId] ?? [:] {
-                    if case .switchMode = binding.action { continue }
+                    if case .switchMode = binding.action {
+                        continue
+                    }
                     bindings[gesture] = binding
                 }
 

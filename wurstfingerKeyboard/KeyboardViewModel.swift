@@ -255,7 +255,7 @@ final class KeyboardViewModel: ObservableObject {
         // so the globe swipe always advances.
         let cycle = validStored.count > 1
             ? validStored
-            : KeyboardRegistry.available.map { $0.id }
+            : KeyboardRegistry.available.map(\.id)
 
         enabledLanguageIds = cycle
 

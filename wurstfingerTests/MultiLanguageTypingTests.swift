@@ -13,7 +13,13 @@ import Testing
 
 struct MultiLanguageTypingTests {
     private func inserts(_ target: MockTextTarget) -> [String] {
-        target.events.compactMap { if case let .insertText(t) = $0 { t } else { nil } }
+        target.events.compactMap {
+            if case let .insertText(t) = $0 {
+                t
+            } else {
+                nil
+            }
+        }
     }
 
     /// For every registered language, tapping the center key produces that

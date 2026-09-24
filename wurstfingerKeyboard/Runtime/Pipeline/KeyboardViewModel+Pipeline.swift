@@ -223,7 +223,9 @@ extension KeyboardViewModel {
             return
         }
         // 2. Uppercase of center character (letter keys)
-        if tryCircularUppercase(key: key) { return }
+        if tryCircularUppercase(key: key) {
+            return
+        }
         // 3. Fallback to opposite direction's binding
         if let binding = key.bindings[opposite] {
             dispatchBinding(binding)
@@ -364,7 +366,9 @@ extension KeyboardViewModel {
         var seenWord = false
         for char in text {
             if char.isWhitespace {
-                if seenWord { break }
+                if seenWord {
+                    break
+                }
             } else {
                 seenWord = true
             }
@@ -380,7 +384,9 @@ extension KeyboardViewModel {
         var seenWord = false
         for char in text.reversed() {
             if char.isWhitespace {
-                if seenWord { break }
+                if seenWord {
+                    break
+                }
             } else {
                 seenWord = true
             }

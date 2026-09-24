@@ -26,8 +26,12 @@ extension KeyAction {
         switch self {
         case let .commitText(text):
             guard let char = text.first else { return .symbol }
-            if char.isLetter { return .letter }
-            if char.isNumber { return .digit }
+            if char.isLetter {
+                return .letter
+            }
+            if char.isNumber {
+                return .digit
+            }
             return .symbol
         case .compose: return .compose
         case .cycleAccents: return .compose

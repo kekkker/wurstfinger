@@ -80,7 +80,9 @@ struct ComposeEngine {
             for (base, accented) in charMap.sorted(by: { $0.key < $1.key }) {
                 // Skip non-cycling entries: space fallbacks (" " → trigger char)
                 // and multi-character bases (already-composed forms like "â" → "ấ")
-                if base == " " || base.count > 1 { continue }
+                if base == " " || base.count > 1 {
+                    continue
+                }
 
                 // Add base → accented mapping
                 if cycles[base] == nil {

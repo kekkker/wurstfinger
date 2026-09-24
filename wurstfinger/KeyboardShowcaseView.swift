@@ -48,12 +48,16 @@ private class ActionCountTarget: TextInputTarget, ObservableObject {
 
     func insertText(_ text: String) {
         count += 1
-        if capturesText { before += text }
+        if capturesText {
+            before += text
+        }
     }
 
     func deleteBackward() {
         count += 1
-        if capturesText, !before.isEmpty { before.removeLast() }
+        if capturesText, !before.isEmpty {
+            before.removeLast()
+        }
     }
 
     func adjustTextPosition(byCharacterOffset offset: Int) {

@@ -19,7 +19,13 @@ struct ReturnSwipeLanguageTests {
 
         vm.handleGesture(.swipeUp, keyId: GridSlot.center, isReturn: true)
 
-        let inserts = target.events.compactMap { if case let .insertText(t) = $0 { t } else { nil } }
+        let inserts = target.events.compactMap {
+            if case let .insertText(t) = $0 {
+                t
+            } else {
+                nil
+            }
+        }
         #expect(
             inserts.last == "H",
             "French return swipe up on center key should produce H (uppercase), got \(inserts.last ?? "nil")"

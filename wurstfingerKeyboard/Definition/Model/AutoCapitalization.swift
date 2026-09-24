@@ -31,10 +31,14 @@ enum AutoCapitalization {
     static func shouldCapitalize(context: String?) -> Bool {
         // At start of text field
         guard let context else { return true }
-        if context.isEmpty { return true }
+        if context.isEmpty {
+            return true
+        }
 
         // Only whitespace means start of input
-        if context.allSatisfy(\.isWhitespace) { return true }
+        if context.allSatisfy(\.isWhitespace) {
+            return true
+        }
 
         guard let lastChar = context.last else { return false }
 

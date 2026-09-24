@@ -217,7 +217,13 @@ struct wurstfingerTests {
         // In German, topCenter swipeUpRight is ´ (compose), return swipe is \u{2019}
         vm.handleGesture(.swipeUpRight, keyId: GridSlot.topCenter, isReturn: true)
 
-        let inserts = target.events.compactMap { if case let .insertText(t) = $0 { t } else { nil } }
+        let inserts = target.events.compactMap {
+            if case let .insertText(t) = $0 {
+                t
+            } else {
+                nil
+            }
+        }
         #expect(inserts.last == "\u{2019}", "Return swipe should insert right single quotation mark, got \(inserts.last ?? "nil")")
     }
 
@@ -229,7 +235,13 @@ struct wurstfingerTests {
         func trigger(keyId: String, gesture: GestureType, expected: String) {
             target.events.removeAll()
             vm.handleGesture(gesture, keyId: keyId, isReturn: true)
-            let inserts = target.events.compactMap { if case let .insertText(t) = $0 { t } else { nil } }
+            let inserts = target.events.compactMap {
+                if case let .insertText(t) = $0 {
+                    t
+                } else {
+                    nil
+                }
+            }
             #expect(inserts.last == expected, "\(keyId) \(gesture) return: expected '\(expected)', got '\(inserts.last ?? "nil")'")
         }
 
@@ -270,7 +282,13 @@ struct wurstfingerTests {
         vm.handleGesture(.swipeUpRight, keyId: GridSlot.topCenter, isReturn: false)
 
         // The compose middleware should have: deleted "a", inserted "á"
-        let inserts = target.events.compactMap { if case let .insertText(t) = $0 { t } else { nil } }
+        let inserts = target.events.compactMap {
+            if case let .insertText(t) = $0 {
+                t
+            } else {
+                nil
+            }
+        }
         #expect(inserts.last == "á", "Compose should produce á, got \(inserts.last ?? "nil")")
     }
 
@@ -282,13 +300,25 @@ struct wurstfingerTests {
         #expect(vm.activeModeName == ModeNames.shifted)
         vm.handleGesture(.tap, keyId: GridSlot.topLeft, isReturn: false)
 
-        let inserts = target.events.compactMap { if case let .insertText(t) = $0 { t } else { nil } }
+        let inserts = target.events.compactMap {
+            if case let .insertText(t) = $0 {
+                t
+            } else {
+                nil
+            }
+        }
         #expect(inserts.contains("A"))
 
         // Compose triggers should work from main mode (auto-transitioned back)
         vm.handleGesture(.swipeUpRight, keyId: GridSlot.topCenter, isReturn: false)
 
-        let allInserts = target.events.compactMap { if case let .insertText(t) = $0 { t } else { nil } }
+        let allInserts = target.events.compactMap {
+            if case let .insertText(t) = $0 {
+                t
+            } else {
+                nil
+            }
+        }
         #expect(allInserts.last == "Á", "Compose should produce Á after uppercase A, got \(allInserts.last ?? "nil")")
     }
 }

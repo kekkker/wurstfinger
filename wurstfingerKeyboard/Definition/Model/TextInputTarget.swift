@@ -41,5 +41,7 @@ protocol TextInputTarget: AnyObject {
 }
 
 extension TextInputTarget {
-    var allowsSpellChecking: Bool { true }
+    var allowsSpellChecking: Bool {
+        true
+    }
 }

@@ -84,13 +84,19 @@ final class HapticSettings: ObservableObject {
     /// Reload settings from UserDefaults (e.g., after changes from host app)
     func reload() {
         let newEnabled = defaults.object(forKey: SettingsKey.hapticEnabled.rawValue) as? Bool ?? true
-        if enabled != newEnabled { enabled = newEnabled }
+        if enabled != newEnabled {
+            enabled = newEnabled
+        }
 
         let newTap = Self.loadIntensity(from: defaults, key: .hapticIntensityTap, default: Self.defaultTapIntensity)
-        if abs(tapIntensity - newTap) > 0.0001 { tapIntensity = newTap }
+        if abs(tapIntensity - newTap) > 0.0001 {
+            tapIntensity = newTap
+        }
 
         let newDrag = Self.loadIntensity(from: defaults, key: .hapticIntensityDrag, default: Self.defaultDragIntensity)
-        if abs(dragIntensity - newDrag) > 0.0001 { dragIntensity = newDrag }
+        if abs(dragIntensity - newDrag) > 0.0001 {
+            dragIntensity = newDrag
+        }
     }
 
     /// Returns the intensity for a given haptic event type
@@ -189,22 +195,30 @@ final class LayoutSettings: ObservableObject {
     /// Reload settings from UserDefaults
     func reload() {
         let newUtility = defaults.object(forKey: SettingsKey.utilityColumnLeading.rawValue) as? Bool ?? false
-        if utilityColumnLeading != newUtility { utilityColumnLeading = newUtility }
+        if utilityColumnLeading != newUtility {
+            utilityColumnLeading = newUtility
+        }
 
         let savedRatio = defaults.object(forKey: SettingsKey.keyAspectRatio.rawValue) as? Double
             ?? DeviceLayoutUtils.defaultKeyAspectRatio
         let newRatio = Self.clampAspectRatio(savedRatio)
-        if keyAspectRatio != newRatio { keyAspectRatio = newRatio }
+        if keyAspectRatio != newRatio {
+            keyAspectRatio = newRatio
+        }
 
         let savedScale = defaults.object(forKey: SettingsKey.keyboardScale.rawValue) as? Double
             ?? DeviceLayoutUtils.defaultKeyboardScale
         let newScale = Self.clampScale(savedScale)
-        if keyboardScale != newScale { keyboardScale = newScale }
+        if keyboardScale != newScale {
+            keyboardScale = newScale
+        }
 
         let savedPosition = defaults.object(forKey: SettingsKey.keyboardHorizontalPosition.rawValue) as? Double
             ?? DeviceLayoutUtils.defaultKeyboardPosition
         let newPosition = Self.clampPosition(savedPosition)
-        if keyboardHorizontalPosition != newPosition { keyboardHorizontalPosition = newPosition }
+        if keyboardHorizontalPosition != newPosition {
+            keyboardHorizontalPosition = newPosition
+        }
     }
 
     // MARK: - Private Helpers

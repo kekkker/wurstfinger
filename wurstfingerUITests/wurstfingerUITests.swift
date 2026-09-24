@@ -89,7 +89,9 @@ final class wurstfingerUITests: XCTestCase {
 
         // Version is in the About section at the bottom — scroll until visible
         for _ in 0 ..< 5 {
-            if app.staticTexts["Version"].exists { break }
+            if app.staticTexts["Version"].exists {
+                break
+            }
             app.swipeUp()
         }
         XCTAssertTrue(app.staticTexts["Version"].waitForExistence(timeout: 2), "Version row missing")

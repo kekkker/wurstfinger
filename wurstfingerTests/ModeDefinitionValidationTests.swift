@@ -322,7 +322,13 @@ struct ValidationTests {
             arrangements: [.portrait: arrangement],
             autoTransitions: [:], doubleTapMode: nil
         )
-        #expect(mode.validate().filter { if case .columnMismatch = $0 { true } else { false } }.isEmpty)
+        #expect(mode.validate().filter {
+            if case .columnMismatch = $0 {
+                true
+            } else {
+                false
+            }
+        }.isEmpty)
     }
 
     @Test func heightMultiplierSpanningInvalid() {

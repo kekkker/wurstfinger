@@ -16,7 +16,9 @@ extension String {
     /// (`KeyConfig.autoShifted`) and the directional-override return actions in
     /// `GridKeyboardFactory`, so the two stay consistent.
     func keyboardUppercased(with locale: Locale) -> String {
-        if self == "ß" { return "ẞ" }
+        if self == "ß" {
+            return "ẞ"
+        }
         return uppercased(with: locale)
     }
 }

@@ -19,7 +19,13 @@ import Testing
 
 struct ReturnSwipePipelineTests {
     private func inserts(_ target: MockTextTarget) -> [String] {
-        target.events.compactMap { if case let .insertText(t) = $0 { t } else { nil } }
+        target.events.compactMap {
+            if case let .insertText(t) = $0 {
+                t
+            } else {
+                nil
+            }
+        }
     }
 
     /// A return swipe on a symbol slot produces its `returnAction`, not its

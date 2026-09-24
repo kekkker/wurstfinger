@@ -61,7 +61,7 @@ struct DataDrivenKeyboardRootView: View {
                         .padding(.top, KeyboardConstants.Layout.verticalPaddingTop)
                         .padding(.bottom, KeyboardConstants.Layout.verticalPaddingBottom)
                 } else if let mode = viewModel.activeModeFromDefinition,
-                   let arrangement = mode.arrangement(for: viewModel.currentContext) {
+                          let arrangement = mode.arrangement(for: viewModel.currentContext) {
                     KeyboardGridView(
                         arrangement: arrangement,
                         keys: mode.keys,
