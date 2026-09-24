@@ -66,10 +66,10 @@ struct KeyView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let padding = look.settings.keyPadding
+            let padding = CGFloat(look.settings.keyPadding)
             let width = max(0, proxy.size.width - 2 * padding)
             let keyHeight = max(0, proxy.size.height - 2 * padding)
-            let borderWidth = look.settings.keyBorderWidth / 10
+            let borderWidth = CGFloat(look.settings.keyBorderWidth / 10)
             // Thumb-Key sizes legends from the average of one column's width and the height.
             let keySize = max(0, (width / spanRatio + keyHeight) / 2 - borderWidth)
 
@@ -120,7 +120,7 @@ struct KeyView: View {
     // MARK: - Background
 
     private func keyShape(width: CGFloat, height: CGFloat) -> RoundedRectangle {
-        RoundedRectangle(cornerRadius: look.settings.keyRadius / 100 * (width + height) / 4)
+        RoundedRectangle(cornerRadius: CGFloat(look.settings.keyRadius / 100) * (width + height) / 4)
     }
 
     @ViewBuilder
@@ -162,7 +162,7 @@ struct KeyView: View {
         // inwards as corners get rounder so they stay clear of the curve.
         let xPadding = 2 + borderWidth
         let yPadding = borderWidth
-        let radiusFraction = look.settings.keyRadius / 100
+        let radiusFraction = CGFloat(look.settings.keyRadius / 100)
         let diagonalX = xPadding + 20 * radiusFraction
         let diagonalY = yPadding + 20 * radiusFraction
 

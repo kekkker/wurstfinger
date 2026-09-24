@@ -8,6 +8,7 @@
 //
 
 import Foundation
+import notify
 
 /// An editing command executed by the host app's text input.
 enum TextCommand: Equatable {

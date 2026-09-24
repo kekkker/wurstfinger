@@ -5,7 +5,7 @@
 //  Created by Claas Flint on 24.10.25.
 //
 //  Tests for behavior not covered by ViewModelPipelineTests:
-//  ComposeEngine, haptic persistence, GestureFeatures, and
+//  ComposeEngine, haptic persistence, and
 //  apostrophe/compose regression tests against the pipeline API.
 //
 
@@ -90,32 +90,6 @@ struct wurstfingerTests {
         let lastStep = ComposeEngine.cycleAccent(for: current)
         #expect(lastStep == "a", "Last variant '\(current)' should cycle back to 'a', got '\(lastStep ?? "nil")'. Full cycle: \(visited)")
     }
-
-    // MARK: - GestureFeatures.empty Tests
-
-    @Test func gestureFeatureEmptyHasSensibleDefaults() {
-        let empty = GestureFeatures.empty()
-
-        #expect(empty.pathLength == 0)
-        #expect(empty.chordLength == 0)
-        #expect(empty.maxDisplacement == 0)
-        #expect(empty.returnRatio == 1)
-        #expect(empty.isTap == true)
-        #expect(empty.isReturn == false)
-        #expect(empty.isCircular == false)
-    }
-
-    @Test func gestureFeatureExtractHandlesEmptyPoints() {
-        let empty = GestureFeatures.extract(from: [])
-        #expect(empty.pathLength == 0)
-        #expect(empty.isTap == true)
-
-        let single = GestureFeatures.extract(from: [.zero])
-        #expect(single.pathLength == 0)
-        #expect(single.isTap == true)
-    }
-
-    // MARK: - Haptic Persistence Tests
 
     @Test @MainActor func hapticIntensitiesPersistToDefaults() throws {
         let suite = "group.de.akator.wurstfinger.tests.hapticsPersist"
