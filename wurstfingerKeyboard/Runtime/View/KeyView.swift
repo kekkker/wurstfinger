@@ -288,7 +288,7 @@ struct KeyView: View {
                                     alignment: alignment
                                 )
                         }
-                    } else if !binding.label.isEmpty {
+                    } else {
                         hintContent(for: binding)
                             .fixedSize()
                             .padding(Self.hintEdgePadding(for: gesture, horizontal: hPad, vertical: vPad))

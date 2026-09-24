@@ -25,8 +25,8 @@ struct CommonKeysTests {
     @Test func globeKeyAction() {
         let globe = CommonKeys.globe
         #expect(globe.id == UtilitySlot.globe)
-        // Switching the input method lives on swipe-left; tap is intentionally inert.
-        #expect(globe.bindings[.tap]?.action == KeyAction.none)
+        // Tap cycles languages; switching the input method lives on swipe-left.
+        #expect(globe.bindings[.tap]?.action == .switchToNextLanguage)
         #expect(globe.bindings[.swipeLeft]?.action == .advanceToNextInputMode)
         #expect(globe.style == .utility)
     }
