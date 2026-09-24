@@ -10,6 +10,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 struct OrientationLayoutTests {
     /// When the keyboard is backgrounded during an orientation change
     /// (e.g. user opens camera in landscape), the keyboard layout uses stale

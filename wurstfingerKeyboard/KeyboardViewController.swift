@@ -18,8 +18,8 @@ final class KeyboardViewController: UIInputViewController {
     /// Breathing room below the keys. Owned by the extension rather than left
     /// to the system's bottom inset: the band the system reserves is painted
     /// with its own gray backdrop, which a third-party keyboard cannot
-    /// recolour. Reserving it here means the gap sits inside this view and
-    /// takes its black background instead.
+    /// recolour. Reserving it here means the gap sits inside the keyboard's
+    /// own view and takes the theme's background instead.
     private static let bottomContentGap: CGFloat = 20.0
 
     /// Signature of the definition currently loaded into the pipeline. Used to
@@ -236,7 +236,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func configureHosting() {
-        let rootView = DataDrivenKeyboardRootView(viewModel: viewModel)
+        let rootView = DataDrivenKeyboardRootView(viewModel: viewModel, bottomGap: Self.bottomContentGap)
         let controller = UIHostingController(rootView: AnyView(rootView))
         controller.view.translatesAutoresizingMaskIntoConstraints = false
         controller.view.backgroundColor = .clear
@@ -248,9 +248,7 @@ final class KeyboardViewController: UIInputViewController {
             controller.view.topAnchor.constraint(equalTo: view.topAnchor),
             controller.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             controller.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            controller.view.bottomAnchor.constraint(
-                equalTo: view.bottomAnchor, constant: -Self.bottomContentGap
-            ),
+            controller.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
 
         controller.didMove(toParent: self)

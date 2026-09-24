@@ -11,6 +11,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 struct CircularGesturePipelineTests {
     /// Path 2: a plain letter key with no explicit circular binding inserts
     /// the uppercase center character.

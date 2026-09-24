@@ -15,6 +15,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 @Suite(.serialized)
 struct TelexTypingTests {
     /// Doubling a vowel composes its circumflex (a + a → â).

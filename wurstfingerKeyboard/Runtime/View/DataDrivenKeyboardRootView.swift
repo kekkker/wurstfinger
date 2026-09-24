@@ -17,6 +17,10 @@ struct DataDrivenKeyboardRootView: View {
     /// When nil, falls back to `viewModel.viewWidth`.
     var overrideWidth: CGFloat?
 
+    /// Empty space below the keys, painted with the keyboard background so
+    /// it follows theme changes live.
+    var bottomGap: CGFloat = 0
+
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.displayScale) private var displayScale
 
@@ -135,7 +139,7 @@ struct DataDrivenKeyboardRootView: View {
                 }
 
                 Color.clear
-                    .frame(height: bottomOffset)
+                    .frame(height: bottomOffset + bottomGap)
             }
 
             if let toast = viewModel.toastMessage {

@@ -10,6 +10,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 @Suite(.serialized)
 struct ReturnSwipeLanguageTests {
     /// French layout: return swipe up on center key (O) should produce the

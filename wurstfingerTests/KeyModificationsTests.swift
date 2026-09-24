@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 struct YAMLMappingTests {
     @Test func parsesNestedBlockMappings() throws {
         let node = try YAMLMapping.parse("""
@@ -77,6 +78,7 @@ struct YAMLMappingTests {
     }
 }
 
+@MainActor
 struct KeyModificationsTests {
     private func definition(_ id: String = "en_US_thumbkey") throws -> KeyboardDefinition {
         try #require(KeyboardRegistry.load(id: id))

@@ -11,6 +11,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 struct MultiLanguageTypingTests {
     private func inserts(_ target: MockTextTarget) -> [String] {
         target.events.compactMap {

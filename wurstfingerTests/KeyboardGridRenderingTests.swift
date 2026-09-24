@@ -13,6 +13,7 @@ import Testing
 
 // MARK: - currentContext
 
+@MainActor
 @Suite(.serialized)
 struct KeyboardViewModelContextTests {
     /// Builds a ViewModel with a deterministic orientation and utility-column
@@ -98,6 +99,7 @@ struct KeyboardViewModelContextTests {
 
 // MARK: - KeyboardGridView Span Behavior
 
+@MainActor
 struct KeyboardGridViewSpanTests {
     @Test func defaultPlacementHasUnitSpan() {
         let placement = KeyPlacement(keyId: "topLeft")
@@ -149,6 +151,7 @@ private func makeKeyView(_ key: KeyConfig) -> KeyView {
     )
 }
 
+@MainActor
 struct KeyViewStyleTests {
     @Test func primaryLabelFallsBackToKeyId() {
         // A key with no tap binding still has a stable label so it can

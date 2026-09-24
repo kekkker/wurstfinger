@@ -13,6 +13,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 struct wurstfingerTests {
     // MARK: - ComposeEngine Tests
 

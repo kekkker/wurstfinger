@@ -125,8 +125,12 @@ final class InMemoryUserDefaults: UserDefaults {
 
 /// Creates a KeyboardViewModel wired to a MockTextTarget for testing.
 ///
+/// Main-actor only, like the keyboard: the view model schedules spell-check
+/// refreshes on the main queue, which must not run concurrently with a test.
+///
 /// Auto-capitalization is off unless requested, so typing sequences stay
 /// predictable; `settings` pre-populates other defaults.
+@MainActor
 func makeViewModel(
     languageId: String = "de_DE",
     autoCapitalize: Bool = false,

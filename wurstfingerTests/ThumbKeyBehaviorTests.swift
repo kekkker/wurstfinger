@@ -15,6 +15,7 @@ private func outcome(_ direction: GestureType?, isReturn: Bool = false) -> KeyGe
     .drag(DragOutcome(finalDirection: direction, maxDirection: direction, isReturn: isReturn, circular: nil))
 }
 
+@MainActor
 @Suite(.serialized)
 struct SpacebarMultiTapTests {
     @Test func repeatedTapsCyclePunctuation() {
@@ -62,6 +63,7 @@ struct SpacebarMultiTapTests {
     }
 }
 
+@MainActor
 @Suite(.serialized)
 struct SwipeResolutionTests {
     @Test func returnSwipeTypesOppositeCase() {
@@ -112,6 +114,7 @@ struct SwipeResolutionTests {
     }
 }
 
+@MainActor
 @Suite(.serialized)
 struct ShiftAndCapitalizationTests {
     @Test func shiftAppliesToOneCharacter() {
@@ -178,6 +181,7 @@ struct ShiftAndCapitalizationTests {
     }
 }
 
+@MainActor
 @Suite(.serialized)
 struct StartingLayerTests {
     @Test func numberFieldsStartOnNumbers() {
@@ -222,6 +226,7 @@ struct StartingLayerTests {
     }
 }
 
+@MainActor
 @Suite(.serialized)
 struct UtilityActionTests {
     @Test func emojiKeyOpensAndClosesPanels() {
