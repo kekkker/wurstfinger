@@ -17,6 +17,9 @@ import Foundation
 /// so it can run without a `KeyboardDefinition` reference at call time.
 struct GhostKeyResolver: GestureResolver {
     let fallbackMode: KeyboardMode
+    /// Resolve to the fallback binding's return action instead (for
+    /// swipe-and-return). Bindings without one don't match.
+    var usesReturnAction = false
 
     func resolve(keyId: String, gesture: GestureType, in mode: KeyboardMode) -> KeyBinding? {
         // Only fall through if the primary mode has no *reachable* binding
@@ -33,6 +36,12 @@ struct GhostKeyResolver: GestureResolver {
         if gesture.isSwipe, !fallbackKey.swipeMode.allows(gesture) {
             return nil
         }
-        return fallbackKey.bindings[gesture]
+        guard let binding = fallbackKey.bindings[gesture] else { return nil }
+        guard usesReturnAction else { return binding }
+        guard let returnAction = binding.returnAction else { return nil }
+        return KeyBinding(
+            label: binding.label, action: returnAction, category: binding.category,
+            returnAction: nil, accessibilityLabel: binding.accessibilityLabel
+        )
     }
 }

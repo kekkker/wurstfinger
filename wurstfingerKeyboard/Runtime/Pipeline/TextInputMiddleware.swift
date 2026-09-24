@@ -7,8 +7,8 @@
 
 import Foundation
 
-/// Applies text-mutating actions (`.commitText`, `.deleteBackward`,
-/// `.space`, `.newline`, `.moveCursor`) to the injected target.
+/// Applies text-mutating actions (`.commitText`, `.replaceLastText`,
+/// `.deleteBackward`, `.space`, `.newline`, `.moveCursor`) to the injected target.
 ///
 /// Non-text actions (mode switches, haptics, capitalization) pass through
 /// unchanged so later middlewares can react to them.
@@ -40,6 +40,12 @@ struct TextInputMiddleware: ActionMiddleware {
         switch action {
         case let .commitText(text):
             target.insertText(text)
+        case let .replaceLastText(text, trimCount):
+            let available = target.documentContextBeforeInput?.count ?? 0
+            for _ in 0 ..< min(trimCount, available) {
+                target.deleteBackward()
+            }
+            target.insertText(text)
         case .deleteBackward:
             target.deleteBackward()
         case .space:
@@ -48,9 +54,7 @@ struct TextInputMiddleware: ActionMiddleware {
             target.insertText("\n")
         case let .moveCursor(offset):
             target.adjustTextPosition(byCharacterOffset: offset)
-        case .compose, .cycleAccents, .switchMode, .capitalizeWord,
-             .advanceToNextInputMode, .dismissKeyboard, .deleteForward,
-             .copy, .paste, .cut, .copyAll, .cutAll, .deleteWord, .none, .switchToNextLanguage, .openEmoji:
+        default:
             break
         }
     }

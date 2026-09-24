@@ -20,9 +20,12 @@ import SwiftUI
 struct KeyboardGridView: View {
     let arrangement: GridArrangement
     let keys: [String: KeyConfig]
-    let onGesture: (KeyConfig, GestureType, Bool) -> Void
-    var onTouchDown: (() -> Void)?
-    var onSlide: ((KeyConfig, SlidePhase) -> Void)?
+    let look: KeyLook
+    /// Height of one key row, in points.
+    let keyHeight: CGFloat
+    let makeGestureConfig: (KeyConfig, CGFloat) -> KeyGestureConfig
+    let onTouchDown: () -> Void
+    let onEvent: (KeyConfig, KeyGestureEvent) -> KeyAction?
 
     var body: some View {
         Grid(
@@ -52,10 +55,12 @@ struct KeyboardGridView: View {
         if let key = keys[placement.keyId] {
             KeyView(
                 key: key,
-                onGesture: onGesture,
+                look: look,
+                height: keyHeight,
+                spanRatio: CGFloat(placement.widthMultiplier) / CGFloat(placement.heightMultiplier),
+                makeGestureConfig: makeGestureConfig,
                 onTouchDown: onTouchDown,
-                onSlide: onSlide,
-                spanRatio: CGFloat(placement.widthMultiplier) / CGFloat(placement.heightMultiplier)
+                onEvent: onEvent
             )
             .gridCellColumns(placement.widthMultiplier)
             .gridCellAnchor(.top)

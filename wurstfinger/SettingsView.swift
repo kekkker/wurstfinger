@@ -31,19 +31,10 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.numpadStyle.rawValue, store: SharedDefaults.store)
     private var numpadStyleRaw = NumpadStyle.phone.rawValue
 
-    @AppStorage(SettingsKey.cursorMovementStyle.rawValue, store: SharedDefaults.store)
-    private var cursorMovementStyleRaw = CursorMovementStyle.continuous.rawValue
-
     @AppStorage(SettingsKey.keyboardStyle.rawValue, store: SharedDefaults.store)
     private var keyboardStyleRaw = KeyboardStyle.classic.rawValue
 
-    @AppStorage(SettingsKey.autoCapitalizeEnabled.rawValue, store: SharedDefaults.store)
-    private var autoCapitalizeEnabled = false
-
     private let licenseURL = URL(string: "https://github.com/cl445/wurstfinger/blob/main/LICENSE")!
-
-    @AppStorage(SettingsKey.expertModeEnabled.rawValue, store: SharedDefaults.store)
-    private var expertModeEnabled = false
 
     var body: some View {
         NavigationStack {
@@ -51,7 +42,7 @@ struct SettingsView: View {
                 generalSection
                 appearanceSection
                 feedbackSection
-                expertSection
+                dataSection
                 aboutSection
             }
             .navigationTitle("Settings")
@@ -74,22 +65,11 @@ struct SettingsView: View {
                 )
             }
 
-            Toggle(isOn: $autoCapitalizeEnabled) {
+            NavigationLink(destination: BehaviorSettingsView()) {
                 SettingsRow(
-                    icon: "textformat.size.larger", color: .teal,
-                    title: "Auto-Capitalize",
-                    subtitle: String(localized: "Capitalize after sentence-ending punctuation")
-                )
-            }
-
-            Picker(selection: $cursorMovementStyleRaw) {
-                Text("Continuous").tag(CursorMovementStyle.continuous.rawValue)
-                Text("Step-by-step").tag(CursorMovementStyle.discrete.rawValue)
-            } label: {
-                SettingsRow(
-                    icon: "cursor.rays", color: .green,
-                    title: "Cursor Movement",
-                    subtitle: cursorMovementStyleDescription
+                    icon: "hand.draw", color: .teal,
+                    title: "Behavior",
+                    subtitle: String(localized: "Auto-capitalize, swipes, space and backspace")
                 )
             }
         } header: {
@@ -99,6 +79,14 @@ struct SettingsView: View {
 
     private var appearanceSection: some View {
         Section {
+            NavigationLink(destination: LookAndFeelSettingsView()) {
+                SettingsRow(
+                    icon: "paintpalette", color: .pink,
+                    title: "Look and feel",
+                    subtitle: String(localized: "Theme, legends, key shape")
+                )
+            }
+
             NavigationLink(destination: StyleSettingsView()) {
                 SettingsRow(icon: "paintbrush", color: .cyan, title: "Style", subtitle: keyboardStyleDescription)
             }
@@ -143,18 +131,16 @@ struct SettingsView: View {
         }
     }
 
-    private var expertSection: some View {
+    private var dataSection: some View {
         Section {
-            NavigationLink(destination: ExpertSettingsView()) {
-                SettingsRow(
-                    icon: "slider.horizontal.3",
-                    color: .orange,
-                    title: "Expert",
-                    subtitle: expertModeEnabled ? "Gesture tuning enabled" : "Advanced gesture settings"
-                )
+            NavigationLink(destination: ClipboardSettingsView()) {
+                SettingsRow(icon: "doc.on.clipboard", color: .brown, title: "Clipboard")
+            }
+            NavigationLink(destination: BackupSettingsView()) {
+                SettingsRow(icon: "externaldrive", color: .gray, title: "Backup and restore")
             }
         } header: {
-            Text("Advanced")
+            Text("Data")
         }
     }
 
@@ -220,16 +206,6 @@ struct SettingsView: View {
     private var keyboardStyleDescription: String {
         let style = KeyboardStyle(rawValue: keyboardStyleRaw) ?? .classic
         return style.displayName
-    }
-
-    private var cursorMovementStyleDescription: String {
-        let style = CursorMovementStyle(rawValue: cursorMovementStyleRaw) ?? .continuous
-        switch style {
-        case .continuous:
-            return "Drag to move cursor"
-        case .discrete:
-            return "Swipe per character, return-swipe per word"
-        }
     }
 
     private var numpadStyleDescription: String {

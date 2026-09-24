@@ -23,9 +23,12 @@ final class KeyboardViewController: UIInputViewController {
     private static let bottomContentGap: CGFloat = 20.0
 
     /// Signature of the definition currently loaded into the pipeline. Used to
-    /// skip the expensive rebuild (two resolver chains + 8 middlewares) on every
-    /// `viewWillAppear` when nothing that affects the definition changed.
+    /// skip the pipeline rebuild on every `viewWillAppear` when nothing that
+    /// affects the definition changed.
     private var loadedDefinitionSignature: String?
+
+    /// The focused document, to pick a fresh starting layer when focus moves.
+    private var currentDocumentIdentifier: UUID?
 
     /// Reports the active keyboard language to iOS (shown in Settings > Keyboards).
     /// Reads directly from SharedDefaults to pick up language changes made in the host app,
@@ -53,10 +56,10 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Opaque black, not clear: the SwiftUI content is shorter than the
-        // region iOS hands the extension, and a transparent root lets the
-        // system's gray keyboard backdrop show through in the leftover band.
-        view.backgroundColor = .black
+        // Opaque, not clear: the SwiftUI content is shorter than the region
+        // iOS hands the extension, and a transparent root lets the system's
+        // gray keyboard backdrop show through in the leftover band.
+        applyBackgroundColor()
 
         // Completely disable the gray accessory bar
         inputAssistantItem.leadingBarButtonGroups = []
@@ -67,9 +70,11 @@ final class KeyboardViewController: UIInputViewController {
         let target = DocumentProxyTarget(controller: self)
         documentProxyTarget = target
         viewModel.bindTextInputTarget(target)
+        viewModel.textCommandBridge = DarwinTextCommandBridge()
         viewModel.bindViewControllerActions(
             advanceToNextInputMode: { [weak self] in self?.advanceToNextInputMode() },
-            dismissKeyboard: { [weak self] in self?.dismissKeyboard() }
+            dismissKeyboard: { [weak self] in self?.dismissKeyboard() },
+            openSettings: { [weak self] in self?.openContainingApp(path: "settings") }
         )
 
         // Load the keyboard definition for the selected language
@@ -93,6 +98,9 @@ final class KeyboardViewController: UIInputViewController {
         // keyboard was backgrounded — avoids rebuilding the pipeline every time.
         loadDefinitionIfNeeded()
         updateKeyboardHeight()
+        viewModel.clipboardHistory.captureSystemPasteboard()
+        currentDocumentIdentifier = textDocumentProxy.documentIdentifier
+        viewModel.resetModeForCurrentField()
     }
 
     /// Loads the keyboard definition only when the inputs that determine it
@@ -105,7 +113,8 @@ final class KeyboardViewController: UIInputViewController {
         let numpadStyle = SharedDefaults.store.string(
             forKey: SettingsKey.numpadStyle.rawValue
         ) ?? ""
-        let signature = "\(languageId)|\(numpadStyle)"
+        let lettersAfterSpace = viewModel.behaviorSettings.switchToLettersAfterSpace
+        let signature = "\(languageId)|\(numpadStyle)|\(lettersAfterSpace)"
         guard signature != loadedDefinitionSignature else { return }
         // Cache the signature only after a successful load so a failed lookup
         // does not suppress future reload attempts.
@@ -118,10 +127,14 @@ final class KeyboardViewController: UIInputViewController {
         // Match that rendered geometry exactly so compact layouts are not
         // clipped at the top by an undersized keyboard host view.
         // Grow by the gap so reserving it does not squeeze the keys.
+        let defaults = SharedDefaults.store
+        let backdrop = defaults.bool(forKey: SettingsKey.backdropEnabled.rawValue)
+            ? KeyboardConstants.Layout.backdropTopPadding : 0
+        let bottomOffset = CGFloat(defaults.double(forKey: SettingsKey.bottomOffset.rawValue))
         let finalHeight = KeyboardConstants.Calculations.renderedHeight(
             aspectRatio: viewModel.keyAspectRatio,
             scale: viewModel.keyboardScale
-        ) + Self.bottomContentGap
+        ) + backdrop + bottomOffset + Self.bottomContentGap
 
         if let constraint = heightConstraint {
             constraint.constant = finalHeight
@@ -135,7 +148,7 @@ final class KeyboardViewController: UIInputViewController {
 
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
-        view.backgroundColor = .black
+        applyBackgroundColor()
         // Force hide the assistant view on every layout
         inputAssistantItem.leadingBarButtonGroups = []
         inputAssistantItem.trailingBarButtonGroups = []
@@ -148,6 +161,46 @@ final class KeyboardViewController: UIInputViewController {
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         viewModel.scheduleSpellcheckRefresh()
+        viewModel.clipboardHistory.captureSystemPasteboard()
+        let documentIdentifier = textDocumentProxy.documentIdentifier
+        if documentIdentifier != currentDocumentIdentifier {
+            currentDocumentIdentifier = documentIdentifier
+            viewModel.resetModeForCurrentField()
+        }
+    }
+
+    /// Paints the controller's own band (below the keys) in the theme's
+    /// background so it blends with the keyboard.
+    private func applyBackgroundColor() {
+        let defaults = SharedDefaults.store
+        let style = defaults.string(forKey: SettingsKey.keyboardStyle.rawValue).flatMap(KeyboardStyle.init) ?? .classic
+        guard style == .classic else {
+            view.backgroundColor = .black
+            return
+        }
+        let mode = defaults.string(forKey: SettingsKey.themeMode.rawValue).flatMap(ThemeMode.init) ?? .system
+        let color = defaults.string(forKey: SettingsKey.themeColor.rawValue).flatMap(ThemeColor.init) ?? .system
+        let systemScheme: ColorScheme = traitCollection.userInterfaceStyle == .dark ? .dark : .light
+        let scheme = KeyboardPalette.colorScheme(mode: mode, scheme: systemScheme)
+        let palette = KeyboardPalette.resolve(color: color, mode: mode, scheme: systemScheme)
+        view.backgroundColor = UIColor(palette.background).resolvedColor(
+            with: UITraitCollection(userInterfaceStyle: scheme == .dark ? .dark : .light)
+        )
+    }
+
+    /// Opens the Wurstfinger app. Keyboard extensions have no public API for
+    /// this; the responder chain still reaches the host `UIApplication`.
+    private func openContainingApp(path: String) {
+        guard let url = URL(string: "wurstfinger://\(path)") else { return }
+        let selector = NSSelectorFromString("openURL:")
+        var responder: UIResponder? = self
+        while let current = responder {
+            if current.responds(to: selector), current !== self {
+                current.perform(selector, with: url)
+                return
+            }
+            responder = current.next
+        }
     }
 
     /// Determines whether the host app is currently in a landscape orientation.

@@ -14,7 +14,7 @@ import Foundation
 
 /// Centralized storage for all UserDefaults keys used by the keyboard.
 /// Using an enum prevents typos and makes refactoring easier.
-enum SettingsKey: String {
+enum SettingsKey: String, CaseIterable {
     case hapticIntensityTap
     case hapticIntensityDrag
     case hapticEnabled
@@ -27,10 +27,114 @@ enum SettingsKey: String {
     case enabledLanguageIds
     case pinnedLanguageId
     case autoCapitalizeEnabled
-    case expertModeEnabled
     case keyboardStyle
     case keyboardFullAccess
-    case cursorMovementStyle
+
+    // Behavior (Thumb-Key)
+    case spacebarMultiTaps
+    case switchToLettersAfterSpace
+    case minSwipeLength
+    case slideEnabled
+    case slideCursorMovementMode
+    case slideSensitivity
+    case slideSpacebarDeadzone
+    case slideBackspaceDeadzone
+    case slideHoldEnabled
+    case dragReturnEnabled
+    case circularDragEnabled
+    case clockwiseDragAction
+    case counterclockwiseDragAction
+    case ghostKeysEnabled
+
+    // Look & feel (Thumb-Key)
+    case themeMode
+    case themeColor
+    case hideLetters
+    case hideSymbols
+    case keyboardSplit
+    case keyPadding
+    case keyBorderWidth
+    case keyRadius
+    case bottomOffset
+    case animationSpeed
+    case animationHelperSpeed
+    case showToastOnLayoutSwitch
+    case soundOnTap
+    case backdropEnabled
+
+    // Clipboard (Thumb-Key)
+    case clipboardHistoryEnabled
+    case clipboardAutoCleanup
+    case clipboardCleanupMinutes
+    case clipboardSizeLimit
+    case clipboardMaxItems
+    case clipboardPrivate
+    case clipboardItems
+
+    // Emoji
+    case recentEmoji
+}
+
+// MARK: - Behavior Settings
+
+/// What a circular drag types.
+enum CircularDragAction: String, CaseIterable {
+    /// The same key's letter in the opposite case.
+    case oppositeCase
+    /// The number-layer key at the same position.
+    case numeric
+}
+
+/// Gesture and typing behavior, with Thumb-Key's defaults.
+struct BehaviorSettings: Equatable {
+    var autoCapitalize = true
+    var spacebarMultiTaps = true
+    var switchToLettersAfterSpace = false
+    /// Minimum swipe length in device pixels (Thumb-Key's unit).
+    var minSwipeLength = 40
+    var slideEnabled = false
+    var slideCursorMovementMode = SlideCursorMovementMode.linear
+    var slideSensitivity = 9
+    var slideSpacebarDeadzone = true
+    var slideBackspaceDeadzone = true
+    var slideHoldEnabled = false
+    var dragReturnEnabled = true
+    var circularDragEnabled = true
+    var clockwiseDragAction = CircularDragAction.oppositeCase
+    var counterclockwiseDragAction = CircularDragAction.numeric
+    var ghostKeysEnabled = false
+
+    static let minSwipeLengthRange = 0 ... 200
+    static let slideSensitivityRange = 1 ... 50
+
+    static func load(from defaults: UserDefaults) -> BehaviorSettings {
+        var settings = BehaviorSettings()
+        func bool(_ key: SettingsKey, _ fallback: Bool) -> Bool {
+            defaults.object(forKey: key.rawValue) as? Bool ?? fallback
+        }
+        func int(_ key: SettingsKey, _ fallback: Int) -> Int {
+            (defaults.object(forKey: key.rawValue) as? NSNumber)?.intValue ?? fallback
+        }
+        func raw<T: RawRepresentable>(_ key: SettingsKey, _ fallback: T) -> T where T.RawValue == String {
+            defaults.string(forKey: key.rawValue).flatMap(T.init(rawValue:)) ?? fallback
+        }
+        settings.autoCapitalize = bool(.autoCapitalizeEnabled, settings.autoCapitalize)
+        settings.spacebarMultiTaps = bool(.spacebarMultiTaps, settings.spacebarMultiTaps)
+        settings.switchToLettersAfterSpace = bool(.switchToLettersAfterSpace, settings.switchToLettersAfterSpace)
+        settings.minSwipeLength = int(.minSwipeLength, settings.minSwipeLength)
+        settings.slideEnabled = bool(.slideEnabled, settings.slideEnabled)
+        settings.slideCursorMovementMode = raw(.slideCursorMovementMode, settings.slideCursorMovementMode)
+        settings.slideSensitivity = int(.slideSensitivity, settings.slideSensitivity)
+        settings.slideSpacebarDeadzone = bool(.slideSpacebarDeadzone, settings.slideSpacebarDeadzone)
+        settings.slideBackspaceDeadzone = bool(.slideBackspaceDeadzone, settings.slideBackspaceDeadzone)
+        settings.slideHoldEnabled = bool(.slideHoldEnabled, settings.slideHoldEnabled)
+        settings.dragReturnEnabled = bool(.dragReturnEnabled, settings.dragReturnEnabled)
+        settings.circularDragEnabled = bool(.circularDragEnabled, settings.circularDragEnabled)
+        settings.clockwiseDragAction = raw(.clockwiseDragAction, settings.clockwiseDragAction)
+        settings.counterclockwiseDragAction = raw(.counterclockwiseDragAction, settings.counterclockwiseDragAction)
+        settings.ghostKeysEnabled = bool(.ghostKeysEnabled, settings.ghostKeysEnabled)
+        return settings
+    }
 }
 
 // MARK: - Haptic Settings
@@ -249,14 +353,6 @@ final class LayoutSettings: ObservableObject {
 enum NumpadStyle: String, CaseIterable {
     case phone // 1-2-3 / 4-5-6 / 7-8-9 (default, like phone keypad)
     case classic // 7-8-9 / 4-5-6 / 1-2-3 (like calculator)
-}
-
-// MARK: - Cursor Movement Style
-
-/// Space bar cursor movement style
-enum CursorMovementStyle: String, CaseIterable {
-    case continuous // Joystick-style: drag distance controls cursor position
-    case discrete // MessagEase-style: one swipe = one character, return-swipe = one word
 }
 
 // MARK: - Keyboard Style

@@ -2,103 +2,112 @@
 //  KeyView.swift
 //  Wurstfinger
 //
-//  Generic key view that renders any KeyConfig with style-based appearance
-//  and full gesture recognition.
+//  Draws one key the way Thumb-Key does and feeds its touches into a
+//  gesture session.
 //
 
 import SwiftUI
 
+/// Look-and-feel settings (Thumb-Key defaults).
+struct LookSettings: Equatable {
+    var themeMode = ThemeMode.system
+    var themeColor = ThemeColor.system
+    var hideLetters = false
+    var hideSymbols = false
+    /// Gap around each key, in points.
+    var keyPadding: Double = 0
+    /// Border width in tenths of a point (Thumb-Key's unit).
+    var keyBorderWidth: Double = 1
+    /// Corner radius as a percentage of half the key size.
+    var keyRadius: Double = 0
+    /// Press animation durations, in milliseconds.
+    var animationSpeed: Double = 250
+    var animationHelperSpeed: Double = 250
+
+    static let keyPaddingRange = 0.0 ... 10.0
+    static let keyBorderWidthRange = 0.0 ... 50.0
+    static let keyRadiusRange = 0.0 ... 100.0
+    static let animationSpeedRange = 0.0 ... 500.0
+}
+
+/// Everything shared by all keys for one render.
+struct KeyLook {
+    var settings = LookSettings()
+    var palette = KeyboardPalette.system
+    var style = KeyboardStyle.classic
+    /// Caps lock is on (switches the shift key's legend).
+    var capsLock = false
+    /// The focused field hides its text; no press animation then.
+    var isSecureField = false
+}
+
 /// Generic key view that renders any `KeyConfig`.
 ///
-/// Visual appearance is driven by `key.style`. Hints derive directly from
-/// `key.bindings`, so only the gestures actually defined on a key are shown.
-/// Keys with a `slideType` (space, delete) use `SlideGestureHandler` for
-/// continuous drag tracking. All other keys use `KeyGestureRecognizer` for
-/// swipe/tap/circular gesture classification.
+/// Legends derive directly from `key.bindings`, so only the gestures actually
+/// defined on a key are shown.
 struct KeyView: View {
     let key: KeyConfig
-    let onGesture: (KeyConfig, GestureType, Bool) -> Void
-    var onTouchDown: (() -> Void)?
-    var onSlide: ((KeyConfig, SlidePhase) -> Void)?
+    let look: KeyLook
+    /// Key height in points.
+    let height: CGFloat
+    /// Width in grid columns over height in rows (e.g. 3 for the space bar).
     var spanRatio: CGFloat = 1.0
+    let makeGestureConfig: (KeyConfig, CGFloat) -> KeyGestureConfig
+    let onTouchDown: () -> Void
+    /// Handles a gesture event and returns the action it performed.
+    let onEvent: (KeyConfig, KeyGestureEvent) -> KeyAction?
 
     @State private var isActive = false
-
-    @AppStorage(SettingsKey.keyboardStyle.rawValue, store: SharedDefaults.store)
-    private var keyboardStyle: KeyboardStyle = .classic
-
-    @AppStorage(SettingsKey.keyboardScale.rawValue, store: SharedDefaults.store)
-    private var keyboardScale: Double = DeviceLayoutUtils.defaultKeyboardScale
-
-    @AppStorage(SettingsKey.keyAspectRatio.rawValue, store: SharedDefaults.store)
-    private var keyAspectRatio: Double = DeviceLayoutUtils.defaultKeyAspectRatio
-
-    @AppStorage(SettingsKey.selectedLanguageId.rawValue, store: SharedDefaults.store)
-    private var selectedLanguageId: String = "en_US"
-
-    private var languageLabel: String {
-        let locale = Locale(identifier: selectedLanguageId)
-        return locale.language.languageCode?.identifier.uppercased() ?? ""
-    }
-
-    private var hasMultipleLanguages: Bool {
-        let ids = SharedDefaults.store.stringArray(forKey: SettingsKey.enabledLanguageIds.rawValue)
-        return (ids?.count ?? 0) > 1
-    }
-
-    /// Maps emoji labels to SF Symbol names for utility keys.
-    private static let sfSymbolMap: [String: String] = [
-        "🌐": "globe",
-        "⌫": "delete.backward",
-        "↵": "return",
-    ]
+    @State private var releasedText: String?
+    @State private var releaseOpacity: Double = 0
+    @State private var releaseOffset: CGFloat = 0
+    @State private var releaseGeneration = 0
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
-        keyContent
-    }
+        GeometryReader { proxy in
+            let padding = look.settings.keyPadding
+            let width = max(0, proxy.size.width - 2 * padding)
+            let keyHeight = max(0, proxy.size.height - 2 * padding)
+            let borderWidth = look.settings.keyBorderWidth / 10
+            // Thumb-Key sizes legends from the average of one column's width and the height.
+            let keySize = max(0, (width / spanRatio + keyHeight) / 2 - borderWidth)
 
-    @ViewBuilder
-    private var keyContent: some View {
-        let base = ZStack {
-            background
-            label
-            hintOverlay
+            ZStack {
+                background(width: width, height: keyHeight, borderWidth: borderWidth)
+                legends(keySize: keySize, borderWidth: borderWidth)
+                pressAnimation(keySize: keySize, height: keyHeight)
+            }
+            .frame(width: width, height: keyHeight)
+            .clipShape(keyShape(width: width, height: keyHeight))
+            .padding(padding)
+            .contentShape(Rectangle())
+            .modifier(KeyTouchHandler(
+                makeConfig: { makeGestureConfig(key, keySize) },
+                pixelScale: displayScale,
+                onTouchDown: onTouchDown,
+                onEvent: { event in
+                    let action = onEvent(key, event)
+                    if case let .commitText(text)? = action {
+                        animateRelease(text, height: keyHeight)
+                    }
+                },
+                isActive: $isActive
+            ))
         }
-        .frame(height: effectiveKeyHeight)
+        .frame(height: height)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityIdentifier(key.id)
         .accessibilityAddTraits(.isButton)
-        .contentShape(Rectangle().inset(by: -KeyboardTouchArea.padding))
-
-        if usesSlideGesture {
-            base.modifier(SlideGestureHandler(
-                slideType: key.slideType,
-                onSlide: { phase in onSlide?(key, phase) },
-                onTouchDown: { onTouchDown?() },
-                isActive: $isActive
-            ))
-        } else {
-            base.modifier(KeyGestureRecognizer(
-                onGestureRecognized: { classification in
-                    onGesture(key, classification.gesture, classification.isReturn)
-                },
-                onTouchDown: { onTouchDown?() },
-                aspectRatio: keyAspectRatio,
-                isActive: $isActive
-            ))
-        }
     }
 
-    // MARK: - Style
+    // MARK: - Labels
 
-    /// Primary text shown on the key. Falls back to the binding label or the
-    /// key id (so unconfigured keys are still visible during development).
+    /// Primary text shown on the key. Falls back to the key id (so
+    /// unconfigured keys are still visible during development).
     var primaryLabel: String {
-        if let tap = key.bindings[.tap] {
-            return tap.label
-        }
-        return key.id
+        key.bindings[.tap]?.label ?? key.id
     }
 
     var accessibilityLabel: String {
@@ -108,241 +117,176 @@ struct KeyView: View {
         return primaryLabel
     }
 
-    /// Base font size derived from the visual style.
-    static func baseFontSize(for style: KeyStyle) -> CGFloat {
-        switch style {
-        case .primary:
-            KeyboardConstants.FontSizes.mainLabelBaseSize
-        case .secondary:
-            KeyboardConstants.FontSizes.hintBaseSize
-        case .utility:
-            KeyboardConstants.FontSizes.utilityLabel
-        case .spacebar:
-            KeyboardConstants.FontSizes.defaultLabel
-        case .accent:
-            KeyboardConstants.FontSizes.mainLabelBaseSize
-        }
+    // MARK: - Background
+
+    private func keyShape(width: CGFloat, height: CGFloat) -> RoundedRectangle {
+        RoundedRectangle(cornerRadius: look.settings.keyRadius / 100 * (width + height) / 4)
     }
-
-    /// Effective key height accounting for both keyboard scale and aspect ratio.
-    private var effectiveKeyHeight: CGFloat {
-        KeyboardConstants.Calculations.keyHeight(aspectRatio: keyAspectRatio) * keyboardScale
-    }
-
-    /// Scaled font size proportional to effective key height.
-    private var scaledFontSize: CGFloat {
-        let base = Self.baseFontSize(for: key.style)
-        let scaled = base * (effectiveKeyHeight / KeyboardConstants.FontSizes.mainLabelReferenceHeight)
-        return min(max(scaled, KeyboardConstants.FontSizes.mainLabelMinSize), KeyboardConstants.FontSizes.mainLabelMaxSize)
-    }
-
-    /// Scaled hint font size proportional to effective key height.
-    private var scaledHintFontSize: CGFloat {
-        let base = KeyboardConstants.FontSizes.hintBaseSize
-        let scaled = base * (effectiveKeyHeight / KeyboardConstants.FontSizes.hintReferenceHeight)
-        return min(max(scaled, KeyboardConstants.FontSizes.hintMinSize), KeyboardConstants.FontSizes.hintMaxSize)
-    }
-
-    /// Whether the key should be rendered as an icon-only key (no text label).
-    static func isIconOnly(style: KeyStyle) -> Bool {
-        style == .utility
-    }
-
-    /// Background fill for the key.
-    static func backgroundColor(for style: KeyStyle, active: Bool = false) -> Color {
-        if active {
-            return Color(.tertiarySystemFill)
-        }
-        return Color(.secondarySystemBackground)
-    }
-
-    // MARK: - Gesture Selection
-
-    /// Whether this key uses slide gesture handling instead of standard
-    /// gesture classification.
-    private var usesSlideGesture: Bool {
-        key.slideType != .none
-    }
-
-    // MARK: - View Construction
 
     @ViewBuilder
-    private var background: some View {
-        let shape = RoundedRectangle(cornerRadius: KeyboardConstants.KeyDimensions.cornerRadius)
-        switch keyboardStyle {
+    private func background(width: CGFloat, height: CGFloat, borderWidth: CGFloat) -> some View {
+        let shape = keyShape(width: width, height: height)
+        let palette = look.palette
+        switch look.style {
         case .classic:
-            shape.fill(Self.backgroundColor(for: key.style, active: isActive))
+            let fill = isActive
+                ? palette.inversePrimary
+                : (key.style == .primary || key.style == .accent || key.style == .secondary
+                    ? palette.surface
+                    : palette.surfaceVariant)
+            shape.fill(fill)
+                .overlay(shape.strokeBorder(palette.outline, lineWidth: borderWidth))
         case .liquidGlass:
             shape.fill(.bar)
-                .overlay(
-                    shape.strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5)
-                )
+                .overlay(shape.strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5))
+                .overlay(isActive ? shape.fill(palette.inversePrimary.opacity(0.5)) : nil)
         }
     }
 
-    @ViewBuilder
-    private var label: some View {
-        if key.style == .spacebar {
-            // Spacebar renders blank — label is purely for accessibility.
-            EmptyView()
-        } else {
-            let font = Font.system(size: scaledFontSize, weight: .semibold, design: .rounded)
-            if let sfName = Self.sfSymbolMap[primaryLabel] {
-                Image(systemName: sfName)
-                    .font(font)
-                    .foregroundColor(.primary)
-            } else {
-                Text(primaryLabel)
-                    .font(font)
-                    .foregroundColor(.primary)
-            }
-        }
+    // MARK: - Legends
+
+    /// What to draw for one legend.
+    private enum LegendContent {
+        case text(String, Color)
+        case icon(String, Color)
     }
 
-    // MARK: - Hint Overlay
-
-    /// Mapping from swipe `GestureType` to the SwiftUI `Alignment` where
-    /// the hint label should be placed.
-    private static let hintAlignments: [GestureType: Alignment] = [
-        .swipeUp: .top,
-        .swipeDown: .bottom,
-        .swipeLeft: .leading,
-        .swipeRight: .trailing,
-        .swipeUpLeft: .topLeading,
-        .swipeUpRight: .topTrailing,
-        .swipeDownLeft: .bottomLeading,
-        .swipeDownRight: .bottomTrailing,
+    private static let legendAlignments: [(GestureType, Alignment)] = [
+        (.swipeUpLeft, .topLeading), (.swipeUp, .top), (.swipeUpRight, .topTrailing),
+        (.swipeLeft, .leading), (.swipeRight, .trailing),
+        (.swipeDownLeft, .bottomLeading), (.swipeDown, .bottom), (.swipeDownRight, .bottomTrailing),
     ]
 
-    /// Maps certain key actions to SF Symbol names for hint rendering.
-    private static func hintIcon(for action: KeyAction) -> String? {
-        switch action {
-        case .advanceToNextInputMode: "globe"
-        case .dismissKeyboard: "keyboard.chevron.compact.down"
-        case .copy: "doc.on.doc"
-        case .paste: "doc.on.clipboard"
-        case .cut: "scissors"
-        case .copyAll: "doc.on.doc.fill"
-        case .cutAll: "scissors.badge.ellipsis"
-        case .deleteWord: "delete.left.fill"
-        case .openEmoji: "face.smiling"
-        default: nil
-        }
-    }
+    private func legends(keySize: CGFloat, borderWidth: CGFloat) -> some View {
+        // Thumb-Key's insets: cardinal legends hug the edges, diagonal ones move
+        // inwards as corners get rounder so they stay clear of the curve.
+        let xPadding = 2 + borderWidth
+        let yPadding = borderWidth
+        let radiusFraction = look.settings.keyRadius / 100
+        let diagonalX = xPadding + 20 * radiusFraction
+        let diagonalY = yPadding + 20 * radiusFraction
 
-    /// Directional edge padding for hint labels. Padding is only applied on
-    /// the edges where the hint is aligned, keeping hints close to the key
-    /// border and away from the center label.
-    private static func hintEdgePadding(
-        for gesture: GestureType, horizontal: CGFloat, vertical: CGFloat
-    ) -> EdgeInsets {
-        switch gesture {
-        case .swipeUp:
-            EdgeInsets(top: vertical, leading: 0, bottom: 0, trailing: 0)
-        case .swipeDown:
-            EdgeInsets(top: 0, leading: 0, bottom: vertical, trailing: 0)
-        case .swipeLeft:
-            EdgeInsets(top: 0, leading: horizontal, bottom: 0, trailing: 0)
-        case .swipeRight:
-            EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: horizontal)
-        case .swipeUpLeft:
-            EdgeInsets(top: vertical, leading: horizontal, bottom: 0, trailing: 0)
-        case .swipeUpRight:
-            EdgeInsets(top: vertical, leading: 0, bottom: 0, trailing: horizontal)
-        case .swipeDownLeft:
-            EdgeInsets(top: 0, leading: horizontal, bottom: vertical, trailing: 0)
-        case .swipeDownRight:
-            EdgeInsets(top: 0, leading: 0, bottom: vertical, trailing: horizontal)
-        default:
-            EdgeInsets()
-        }
-    }
-
-    private var hintOverlay: some View {
-        GeometryReader { proxy in
-            let size = proxy.size
-            // Scale padding proportionally with font size
-            let fontRatio = scaledHintFontSize / KeyboardConstants.FontSizes.hintReferenceFontSize
-            let hPad = KeyboardConstants.FontSizes.hintBaseHorizontalPadding * fontRatio
-            let vPad = KeyboardConstants.FontSizes.hintBaseVerticalPadding * fontRatio
-
-            ForEach(Array(key.bindings.keys), id: \.self) { gesture in
-                // Render a hint when it has a text label, or when the action
-                // maps to an icon (globe, dismiss, copy/cut/paste). Utility
-                // icon hints carry an empty label on purpose — their glyph is
-                // derived from the action, so gating on the label alone would
-                // hide them entirely.
-                if let binding = key.bindings[gesture],
-                   !binding.label.isEmpty || Self.hintIcon(for: binding.action) != nil || binding.action == .switchToNextLanguage,
-                   let alignment = Self.hintAlignments[gesture] {
-                    if binding.action == .switchToNextLanguage {
-                        if hasMultipleLanguages {
-                            Text(languageLabel)
-                                .font(.system(size: scaledHintFontSize * 0.75, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.primary.opacity(0.5))
-                                .fixedSize()
-                                .padding(Self.hintEdgePadding(for: gesture, horizontal: hPad, vertical: vPad))
-                                .frame(
-                                    width: size.width,
-                                    height: size.height,
-                                    alignment: alignment
-                                )
-                        }
-                    } else {
-                        hintContent(for: binding)
-                            .fixedSize()
-                            .padding(Self.hintEdgePadding(for: gesture, horizontal: hPad, vertical: vPad))
-                            .frame(
-                                width: size.width,
-                                height: size.height,
-                                alignment: alignment
-                            )
-                    }
+        return ZStack {
+            ForEach(Self.legendAlignments, id: \.0) { gesture, alignment in
+                if let binding = key.bindings[gesture], let content = swipeLegend(for: binding) {
+                    let isDiagonal = alignment == .topLeading || alignment == .topTrailing
+                        || alignment == .bottomLeading || alignment == .bottomTrailing
+                    legendView(content, size: keySize / 5)
+                        .padding(.horizontal, alignment == .top || alignment == .bottom ? 0 : (isDiagonal ? diagonalX : xPadding))
+                        .padding(.vertical, alignment == .leading || alignment == .trailing ? 0 : (isDiagonal ? diagonalY : yPadding))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
                 }
             }
+            if let content = centerLegend {
+                legendView(content, size: keySize / 2.5)
+            }
         }
-        .allowsHitTesting(false)
     }
 
-    /// Whether the icon is a "globe-style" hint (globe, dismiss) that gets
-    /// larger, bolder styling vs. a "symbols-style" hint (copy, paste, cut).
-    private static func isGlobeStyleIcon(for action: KeyAction) -> Bool {
-        switch action {
-        case .advanceToNextInputMode, .dismissKeyboard: true
-        default: false
+    private var centerLegend: LegendContent? {
+        guard key.style != .spacebar, let tap = key.bindings[.tap] else { return nil }
+        switch tap.legend {
+        case let .icon(name):
+            return .icon(name, look.palette.secondary)
+        case let .capsIcon(name, capsLockIcon):
+            return .icon(look.capsLock ? capsLockIcon : name, look.palette.secondary)
+        case .hidden:
+            return nil
+        case .muted, nil:
+            return visibleText(tap.label, color: look.palette.primary)
         }
+    }
+
+    private func swipeLegend(for binding: KeyBinding) -> LegendContent? {
+        switch binding.legend {
+        case .hidden:
+            nil
+        case let .icon(name):
+            .icon(name, look.palette.muted)
+        case let .capsIcon(name, capsLockIcon):
+            .icon(look.capsLock ? capsLockIcon : name, look.palette.muted)
+        case .muted:
+            visibleText(binding.label, color: look.palette.muted)
+        case nil:
+            visibleText(binding.label, color: look.palette.secondary)
+        }
+    }
+
+    /// Text legend unless hidden: letters by "hide letters", symbols by
+    /// "hide symbols"; digits always show.
+    private func visibleText(_ text: String, color: Color) -> LegendContent? {
+        guard !text.isEmpty else { return nil }
+        let hidden = if text.contains(where: \.isLetter) {
+            look.settings.hideLetters
+        } else if text.contains(where: \.isNumber) {
+            false
+        } else {
+            look.settings.hideSymbols
+        }
+        return hidden ? nil : .text(text, color)
     }
 
     @ViewBuilder
-    private func hintContent(for binding: KeyBinding) -> some View {
-        if let iconName = Self.hintIcon(for: binding.action) {
-            if Self.isGlobeStyleIcon(for: binding.action) {
-                // Globe / dismiss: larger, bolder for discoverability
-                Image(systemName: iconName)
-                    .font(.system(size: scaledHintFontSize * 0.75, weight: .medium))
-                    .foregroundStyle(Color.primary.opacity(0.5))
-            } else {
-                // Copy / paste / cut: smaller, lighter to avoid visual clutter
-                Image(systemName: iconName)
-                    .font(.system(size: scaledHintFontSize * 0.6, weight: .regular))
-                    .foregroundStyle(Color.secondary.opacity(0.45))
-            }
-        } else {
-            // Text hint — letters get higher prominence than symbols
-            let isLetter = binding.label.first?.isLetter ?? false
-            Text(binding.label)
-                .font(.system(
-                    size: scaledHintFontSize,
-                    weight: isLetter ? .medium : .regular,
-                    design: .rounded
-                ))
-                .foregroundStyle(
-                    isLetter
-                        ? Color.primary.opacity(0.65)
-                        : Color.secondary.opacity(0.55)
-                )
-                .minimumScaleFactor(0.6)
+    private func legendView(_ content: LegendContent, size: CGFloat) -> some View {
+        switch content {
+        case let .text(text, color):
+            // Thumb-Key draws uppercase letters slightly smaller.
+            let fontSize = text.first?.isUppercase == true ? size * 0.8 : size
+            Text(text)
+                .font(.system(size: max(1, fontSize), weight: .bold))
+                .foregroundColor(color)
                 .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .fixedSize(horizontal: false, vertical: true)
+        case let .icon(name, color):
+            Image(systemName: name)
+                .resizable()
+                .scaledToFit()
+                .foregroundColor(color)
+                .frame(width: size * 0.85, height: size * 0.85)
+                .frame(width: size, height: size)
+        }
+    }
+
+    // MARK: - Press Animation
+
+    /// Thumb-Key's release animation: the key flashes and the typed text drops
+    /// in, then both fade out.
+    @ViewBuilder
+    private func pressAnimation(keySize: CGFloat, height _: CGFloat) -> some View {
+        if let releasedText {
+            ZStack {
+                look.palette.tertiaryContainer
+                Text(releasedText)
+                    .font(.system(size: max(1, keySize / 2.5), weight: .bold))
+                    .foregroundColor(look.palette.tertiary)
+                    .lineLimit(1)
+                    .offset(y: releaseOffset)
+            }
+            .opacity(releaseOpacity)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private func animateRelease(_ text: String, height: CGFloat) {
+        guard !look.isSecureField, look.style == .classic else { return }
+        let speed = look.settings.animationSpeed / 1000
+        let helper = look.settings.animationHelperSpeed / 1000
+        releaseGeneration += 1
+        let generation = releaseGeneration
+        releasedText = text
+        releaseOpacity = 1
+        releaseOffset = -height / 2
+        DispatchQueue.main.async {
+            withAnimation(.linear(duration: speed)) {
+                releaseOffset = 0
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + helper) {
+            guard generation == releaseGeneration else { return }
+            withAnimation(.easeOut(duration: speed)) {
+                releaseOpacity = 0
+            }
         }
     }
 }

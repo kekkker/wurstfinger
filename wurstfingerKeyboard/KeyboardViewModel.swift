@@ -5,6 +5,7 @@
 //  Created by Claas Flint on 24.10.25.
 //
 
+import AudioToolbox
 import Combine
 import CoreGraphics
 import Foundation
@@ -73,12 +74,16 @@ final class KeyboardViewModel: ObservableObject {
     // MARK: - Data-Driven Pipeline State (internal for extension access)
 
     var currentDefinition: KeyboardDefinition?
-    var resolverChain: GestureResolverChain?
-    var returnSwipeResolverChain: GestureResolverChain?
     var pipeline: ActionPipeline?
     weak var textInputTarget: TextInputTarget?
     var onAdvanceToNextInputMode: (() -> Void)?
     var onDismissKeyboard: (() -> Void)?
+    var onOpenSettings: (() -> Void)?
+    /// Runs selection, undo and redo in the host app (WurstSecure).
+    var textCommandBridge: TextCommandBridge?
+    let clipboardHistory: ClipboardHistory
+    /// Gesture and typing behavior, reloaded with the other settings.
+    private(set) var behaviorSettings: BehaviorSettings
     /// Locale used by the pipeline (set from the keyboard definition).
     var pipelineLocale: Locale?
     private var enabledLanguageIds: [String] = []
@@ -130,18 +135,23 @@ final class KeyboardViewModel: ObservableObject {
 
     let sharedDefaults: UserDefaults
     let shouldPersistSettings: Bool
-    var isSpaceDragging = false
-    var spaceDragResidual: CGFloat = 0
-    /// Peak signed displacement during the current space drag. Used by the
-    /// discrete cursor-movement mode to classify regular vs. return swipes.
-    var spaceDragPeak: CGFloat = 0
-    /// Cursor-movement style captured at the start of the current space drag, so
-    /// a mid-drag settings change cannot switch classification mode mid-gesture.
-    var spaceDragCursorStyle: CursorMovementStyle = .continuous
-    var isDeleteDragging = false
-    var deleteDragResidual: CGFloat = 0
+
+    /// The previous tap, for multi-tap cycling.
+    struct LastTap {
+        let action: KeyAction
+        let time: TimeInterval
+        /// Text before the cursor right after the tap, to detect cursor moves.
+        let context: String?
+    }
+
+    var lastTap: LastTap?
+    /// Position in each key's tap cycle.
+    var tapCounts: [String: Int] = [:]
+    /// Selection offset of the current slide, for the no-bridge fallback.
+    var slideSelectionOffset = 0
     private var userDefaultsObserver: NSObjectProtocol?
     private var settingsCancellables = Set<AnyCancellable>()
+    private var toastDismissal: DispatchWorkItem?
     let wordChecker: WordChecking = AppleWordChecker()
     var spellcheckRefreshPending = false
 
@@ -158,6 +168,8 @@ final class KeyboardViewModel: ObservableObject {
         hapticSettings = HapticSettings(defaults: defaults, shouldPersist: shouldPersistSettings)
         layoutSettings = LayoutSettings(defaults: defaults, shouldPersist: shouldPersistSettings)
         hapticManager = HapticFeedbackManager(settings: hapticSettings)
+        behaviorSettings = BehaviorSettings.load(from: defaults)
+        clipboardHistory = ClipboardHistory(defaults: defaults)
 
         enabledLanguageIds = LanguageSettings.loadEnabledLanguageIds(from: defaults)
             ?? [SharedDefaults.store.string(forKey: SettingsKey.selectedLanguageId.rawValue) ?? "en_US"]
@@ -229,15 +241,11 @@ final class KeyboardViewModel: ObservableObject {
         currentDefinition?.mode(activeModeName)
     }
 
-    /// Exposes haptic tap to the pipeline extension.
-    func triggerHapticTap() {
-        hapticManager.tap()
-    }
-
     func reloadSettings() {
         // Delegate to extracted settings classes - eliminates duplicate code
         hapticSettings.reload()
         layoutSettings.reload()
+        behaviorSettings = BehaviorSettings.load(from: sharedDefaults)
 
         enabledLanguageIds = LanguageSettings.loadEnabledLanguageIds(from: sharedDefaults)
             ?? enabledLanguageIds
@@ -270,6 +278,48 @@ final class KeyboardViewModel: ObservableObject {
         if nextId != currentId {
             sharedDefaults.set(nextId, forKey: SettingsKey.selectedLanguageId.rawValue)
             loadDefinition(for: nextId)
+            if sharedDefaults.object(forKey: SettingsKey.showToastOnLayoutSwitch.rawValue) as? Bool ?? true,
+               let title = currentDefinition?.title {
+                showToast(title)
+            }
+        }
+    }
+
+    // MARK: - Toast
+
+    /// Short message shown over the keys (e.g. the new layout's name).
+    @Published private(set) var toastMessage: String?
+
+    func showToast(_ message: String) {
+        toastDismissal?.cancel()
+        toastMessage = message
+        let dismissal = DispatchWorkItem { [weak self] in
+            self?.toastMessage = nil
+        }
+        toastDismissal = dismissal
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: dismissal)
+    }
+
+    // MARK: - Look Toggles
+
+    /// Flips the persistent "hide letters" setting.
+    func toggleHideLetters() {
+        let key = SettingsKey.hideLetters.rawValue
+        sharedDefaults.set(!sharedDefaults.bool(forKey: key), forKey: key)
+    }
+
+    /// Thumb-Key's "move keyboard" cycle: left → split → center → right → left.
+    func cycleKeyboardPosition() {
+        let splitKey = SettingsKey.keyboardSplit.rawValue
+        if sharedDefaults.bool(forKey: splitKey) {
+            sharedDefaults.set(false, forKey: splitKey)
+            layoutSettings.keyboardHorizontalPosition = 0.5
+        } else if layoutSettings.keyboardHorizontalPosition < 0.25 {
+            sharedDefaults.set(true, forKey: splitKey)
+        } else if layoutSettings.keyboardHorizontalPosition <= 0.75 {
+            layoutSettings.keyboardHorizontalPosition = 1
+        } else {
+            layoutSettings.keyboardHorizontalPosition = 0
         }
     }
 
@@ -277,13 +327,17 @@ final class KeyboardViewModel: ObservableObject {
         enabledLanguageIds.count > 1
     }
 
-    // MARK: - Emoji Panel
+    // MARK: - Panels
 
     /// Whether the scrollable emoji panel is currently shown instead of the grid.
     @Published var emojiActive: Bool = false
 
+    /// Whether the clipboard history panel is shown instead of the grid.
+    @Published var clipboardActive: Bool = false
+
     /// Show the emoji panel.
     func openEmoji() {
+        clipboardActive = false
         emojiActive = true
     }
 
@@ -293,9 +347,39 @@ final class KeyboardViewModel: ObservableObject {
         switchToMode(ModeNames.main)
     }
 
+    /// Show the clipboard history panel.
+    func openClipboardHistory() {
+        emojiActive = false
+        clipboardHistory.captureSystemPasteboard()
+        clipboardHistory.purge()
+        clipboardActive = true
+    }
+
+    /// Dismiss the clipboard history panel and return to the alphabetic layer.
+    func closeClipboardHistory() {
+        clipboardActive = false
+        switchToMode(ModeNames.main)
+    }
+
+    /// Hide any panel shown in place of the keys.
+    func closePanels() {
+        emojiActive = false
+        clipboardActive = false
+    }
+
+    /// Paste a clipboard history entry.
+    func pasteClipboardItem(_ item: ClipboardItem, closing: Bool) {
+        dispatchAction(.commitText(item.text))
+        feedbackTap()
+        if closing {
+            closeClipboardHistory()
+        }
+    }
+
     /// Insert an emoji directly into the document.
     func insertEmoji(_ emoji: String) {
         dispatchAction(.commitText(emoji))
+        RecentEmoji.record(emoji, in: sharedDefaults)
         feedbackTap()
     }
 
@@ -312,9 +396,16 @@ final class KeyboardViewModel: ObservableObject {
 
     // MARK: - Haptic Feedback (delegated to HapticFeedbackManager)
 
-    /// Haptic feedback for key touch-down — called by button views on first contact
+    /// System keyboard click sound.
+    private static let keyClickSoundId: SystemSoundID = 1104
+
+    /// Haptic (and optional click) feedback for key touch-down — called by
+    /// button views on first contact
     func feedbackTap() {
         hapticManager.tap()
+        if sharedDefaults.bool(forKey: SettingsKey.soundOnTap.rawValue) {
+            AudioServicesPlaySystemSound(Self.keyClickSoundId)
+        }
     }
 
     func feedbackDrag() {

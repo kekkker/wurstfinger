@@ -73,6 +73,16 @@ enum StandardArrangements {
         ]
     )
 
+    /// Thumb-Key's number layer: bottom row has [0 (2 cols)] [space] [return].
+    private static let numericThumbKeyPortrait = GridArrangement(
+        columns: 4,
+        rows: Array(numericPortrait.rows.dropLast()) + [[
+            .init(keyId: GridSlot.zero, widthMultiplier: 2),
+            .init(keyId: UtilitySlot.space),
+            .init(keyId: UtilitySlot.return),
+        ]]
+    )
+
     // MARK: - Numeric Landscape
 
     private static let numericLandscape = GridArrangement(
@@ -115,6 +125,14 @@ enum StandardArrangements {
     static let numeric3x3: [ArrangementContext: GridArrangement] = [
         .portrait: numericPortrait,
         .portraitUtilityLeft: numericPortrait.mirroredHorizontally(),
+        .landscape: numericLandscape,
+        .landscapeUtilityLeft: numericLandscape.mirroredHorizontally(),
+    ]
+
+    /// Thumb-Key's number layer arrangements.
+    static let numericThumbKey: [ArrangementContext: GridArrangement] = [
+        .portrait: numericThumbKeyPortrait,
+        .portraitUtilityLeft: numericThumbKeyPortrait.mirroredHorizontally(),
         .landscape: numericLandscape,
         .landscapeUtilityLeft: numericLandscape.mirroredHorizontally(),
     ]

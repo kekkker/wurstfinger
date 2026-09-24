@@ -12,77 +12,125 @@ import Foundation
 enum CommonKeys {
     // MARK: - Utility Keys
 
-    static let globe: KeyConfig = {
-        var bindings: [GestureType: KeyBinding] = [:]
-        // Tap cycles languages (same as swipe-right). Switching the input
-        // method lives on the swipe-left gesture below.
-        bindings[.tap] = KeyBinding(
-            label: "🌐", action: .switchToNextLanguage,
-            category: .utility, returnAction: nil,
-            accessibilityLabel: String(localized: "Switch language")
+    /// A binding that shows `icon` as its legend.
+    static func iconBinding(
+        _ action: KeyAction,
+        icon: String,
+        returnAction: KeyAction? = nil,
+        accessibilityLabel: String? = nil
+    ) -> KeyBinding {
+        KeyBinding(
+            label: "", action: action, category: .utility,
+            returnAction: returnAction, accessibilityLabel: accessibilityLabel,
+            legend: .icon(icon)
         )
-        bindings[.swipeLeft] = KeyBinding(
-            label: "", action: .advanceToNextInputMode,
-            category: .utility, returnAction: nil, accessibilityLabel: nil
-        )
-        bindings[.swipeDown] = KeyBinding(
-            label: "", action: .dismissKeyboard,
-            category: .utility, returnAction: nil,
-            accessibilityLabel: String(localized: "Hide keyboard")
-        )
-        bindings[.swipeRight] = KeyBinding(
-            label: "", action: .switchToNextLanguage,
-            category: .utility, returnAction: nil, accessibilityLabel: nil
-        )
-        bindings[.swipeUp] = KeyBinding(
-            label: "", action: .openEmoji,
-            category: .utility, returnAction: nil,
-            accessibilityLabel: String(localized: "Emoji")
-        )
-        return KeyConfig(
-            id: UtilitySlot.globe, bindings: bindings,
-            swipeMode: .fourWayCross, slideType: .none,
-            style: .utility, tapCycleActions: nil
-        )
-    }()
+    }
 
-    static let delete = KeyConfig.utility(
-        UtilitySlot.delete, label: "⌫", action: .deleteBackward,
-        swipeMode: .twoWayHorizontal, slideType: .delete,
-        accessibilityLabel: String(localized: "Delete")
+    /// A binding with no legend (e.g. the space bar's cursor swipes).
+    static func hiddenBinding(_ action: KeyAction, returnAction: KeyAction? = nil) -> KeyBinding {
+        KeyBinding(
+            label: "", action: action, category: .utility,
+            returnAction: returnAction, accessibilityLabel: nil, legend: .hidden
+        )
+    }
+
+    /// Thumb-Key's emoji key ("special action" key), in the globe slot:
+    /// tap opens emoji; ↑ settings, ↖ hide letters, ← next language,
+    /// → move keyboard, ↓ switch keyboard, ↙ hide keyboard (Thumb-Key has
+    /// voice input there, which iOS keyboards cannot offer).
+    static let globe = KeyConfig(
+        id: UtilitySlot.globe,
+        bindings: [
+            .tap: iconBinding(.openEmoji, icon: "face.smiling", accessibilityLabel: String(localized: "Emoji")),
+            .swipeUp: iconBinding(.openSettings, icon: "gearshape", accessibilityLabel: String(localized: "Settings")),
+            .swipeUpLeft: iconBinding(.toggleHideLetters, icon: "eye.slash", accessibilityLabel: String(localized: "Hide letters")),
+            .swipeLeft: iconBinding(.switchToNextLanguage, icon: "globe", accessibilityLabel: String(localized: "Switch language")),
+            .swipeRight: iconBinding(
+                .cycleKeyboardPosition, icon: "arrow.left.and.right",
+                accessibilityLabel: String(localized: "Move keyboard")
+            ),
+            .swipeDown: iconBinding(
+                .advanceToNextInputMode, icon: "keyboard",
+                accessibilityLabel: String(localized: "Switch keyboard")
+            ),
+            .swipeDownLeft: iconBinding(
+                .dismissKeyboard, icon: "keyboard.chevron.compact.down",
+                accessibilityLabel: String(localized: "Hide keyboard")
+            ),
+        ],
+        swipeMode: .eightWay,
+        slideType: .none,
+        style: .utility,
+        tapCycleActions: nil
     )
 
-    static let `return` = KeyConfig.utility(
-        UtilitySlot.return, label: "↵", action: .newline,
-        accessibilityLabel: String(localized: "New line")
+    /// Thumb-Key's backspace: ← / → delete a word, long press deletes a word,
+    /// sliding selects text to delete.
+    static let delete = KeyConfig(
+        id: UtilitySlot.delete,
+        bindings: [
+            .tap: iconBinding(.deleteBackward, icon: "delete.left", accessibilityLabel: String(localized: "Delete")),
+            .swipeLeft: hiddenBinding(.deleteWordBackward),
+            .swipeRight: hiddenBinding(.deleteWordForward),
+            .longPress: hiddenBinding(.deleteWordBackward),
+        ],
+        swipeMode: .twoWayHorizontal,
+        slideType: .delete,
+        style: .utility,
+        tapCycleActions: nil
     )
 
-    /// Clipboard swipe bindings shared between the symbols (123) key and the
-    /// numeric back-to-main key. Mirrors Thumb-Key's text-edit key positions:
-    ///   ↑ copy · ↗ cut · ↓ paste. (Thumb-Key also puts select-all/undo/redo
-    ///   on the other diagonals, but iOS keyboard extensions expose no API for
-    ///   those, so those slots are intentionally left empty.)
-    static let clipboardSwipes: [GestureType: KeyBinding] = [
-        .swipeUp: KeyBinding(
-            label: "", action: .copy, category: .utility,
-            returnAction: nil, accessibilityLabel: String(localized: "Copy")
+    /// Return. iOS runs the field's return action for a newline, so tap and
+    /// Thumb-Key's long-press newline are the same here.
+    static let `return` = KeyConfig(
+        id: UtilitySlot.return,
+        bindings: [
+            .tap: iconBinding(.newline, icon: "arrow.turn.down.left", accessibilityLabel: String(localized: "New line")),
+            .longPress: hiddenBinding(.newline),
+        ],
+        swipeMode: .eightWay,
+        slideType: .none,
+        style: .utility,
+        tapCycleActions: nil
+    )
+
+    /// Thumb-Key's text-edit swipes, shared by the 123 key and the numeric
+    /// layer's back key: ↑ copy, ↖ select all (return: select line), ↗ cut,
+    /// ↙ undo, ↘ redo, ↓ paste (return: clipboard history).
+    static let textEditSwipes: [GestureType: KeyBinding] = [
+        .swipeUp: iconBinding(.copy, icon: "doc.on.doc", accessibilityLabel: String(localized: "Copy")),
+        .swipeUpLeft: iconBinding(
+            .selectAll, icon: "rectangle.dashed", returnAction: .selectLine,
+            accessibilityLabel: String(localized: "Select all")
         ),
-        .swipeUpRight: KeyBinding(
-            label: "", action: .cut, category: .utility,
-            returnAction: nil, accessibilityLabel: String(localized: "Cut")
-        ),
-        .swipeDown: KeyBinding(
-            label: "", action: .paste, category: .utility,
-            returnAction: nil, accessibilityLabel: String(localized: "Paste")
+        .swipeUpRight: iconBinding(.cut, icon: "scissors", accessibilityLabel: String(localized: "Cut")),
+        .swipeDownLeft: iconBinding(.undo, icon: "arrow.uturn.backward", accessibilityLabel: String(localized: "Undo")),
+        .swipeDownRight: iconBinding(.redo, icon: "arrow.uturn.forward", accessibilityLabel: String(localized: "Redo")),
+        .swipeDown: iconBinding(
+            .paste, icon: "doc.on.clipboard", returnAction: .openClipboardHistory,
+            accessibilityLabel: String(localized: "Paste")
         ),
     ]
 
     static let symbols = KeyConfig.utility(
         UtilitySlot.symbols, label: "123", action: .switchMode(ModeNames.numeric),
         swipeMode: .eightWay,
-        swipes: clipboardSwipes
+        swipes: textEditSwipes
     )
 
+    /// Thumb-Key's multi-tap sequence on the space bar: each further tap
+    /// within a second replaces the previous insertion.
+    static let spacebarTapCycle: [KeyAction] = [
+        .replaceLastText(", ", trimCount: 1),
+        .replaceLastText(". ", trimCount: 2),
+        .replaceLastText("? ", trimCount: 2),
+        .replaceLastText("! ", trimCount: 2),
+        .replaceLastText(": ", trimCount: 2),
+        .replaceLastText("; ", trimCount: 2),
+    ]
+
+    /// Thumb-Key's space bar: ← / → move the cursor, ↙ / ↘ by word, ↑ / ↓ to
+    /// the line start / end (returning: text start / end). No legends.
     static let spacebar = KeyConfig(
         id: UtilitySlot.space,
         bindings: [
@@ -90,11 +138,17 @@ enum CommonKeys {
                 label: "␣", action: .space, category: .utility,
                 returnAction: nil, accessibilityLabel: String(localized: "Space")
             ),
+            .swipeLeft: hiddenBinding(.moveCursor(offset: -1)),
+            .swipeRight: hiddenBinding(.moveCursor(offset: 1)),
+            .swipeDownLeft: hiddenBinding(.moveWordBackward),
+            .swipeDownRight: hiddenBinding(.moveWordForward),
+            .swipeUp: hiddenBinding(.cursorToLineStart, returnAction: .cursorToTextStart),
+            .swipeDown: hiddenBinding(.cursorToLineEnd, returnAction: .cursorToTextEnd),
         ],
-        swipeMode: .none,
+        swipeMode: .eightWay,
         slideType: .moveCursor,
         style: .spacebar,
-        tapCycleActions: nil
+        tapCycleActions: spacebarTapCycle
     )
 
     /// All utility keys as dictionary, mergeable with language keys.
@@ -105,6 +159,33 @@ enum CommonKeys {
         UtilitySlot.symbols: symbols,
         UtilitySlot.space: spacebar,
     ]
+
+    // MARK: - Shift
+
+    /// Shift bindings on the midRight key, per layer, from Thumb-Key: ↑ shifts
+    /// (on the shifted layer: toggles caps lock), ↓ unshifts. Returning
+    /// swipes capitalize or lowercase the word before the cursor.
+    static let shiftUp = KeyBinding(
+        label: "", action: .toggleShift(true), category: .modifier,
+        returnAction: .toggleWordCapitalization(up: true),
+        accessibilityLabel: String(localized: "Shift"), legend: .icon("arrowtriangle.up.fill")
+    )
+    static let capsLockToggle = KeyBinding(
+        label: "", action: .toggleCapsLock, category: .modifier,
+        returnAction: .toggleWordCapitalization(up: true),
+        accessibilityLabel: String(localized: "Caps lock"), legend: .capsIcon("capslock", capsLockIcon: "c.circle")
+    )
+    /// Unshift on the main layer has no legend.
+    static let shiftDownHidden = KeyBinding(
+        label: "", action: .toggleShift(false), category: .modifier,
+        returnAction: .toggleWordCapitalization(up: false),
+        accessibilityLabel: nil, legend: .hidden
+    )
+    static let shiftDown = KeyBinding(
+        label: "", action: .toggleShift(false), category: .modifier,
+        returnAction: .toggleWordCapitalization(up: false),
+        accessibilityLabel: String(localized: "Unshift"), legend: .icon("arrowtriangle.down.fill")
+    )
 
     // MARK: - Default Slot Bindings
 
@@ -217,10 +298,7 @@ enum CommonKeys {
                 label: "|", action: .commitText("|"), category: nil,
                 returnAction: .commitText("¶"), accessibilityLabel: nil
             ),
-            .swipeUp: KeyBinding(
-                label: "⇧", action: .switchMode(ModeNames.shifted), category: .modifier,
-                returnAction: .capitalizeWord(uppercased: true), accessibilityLabel: nil
-            ),
+            .swipeUp: shiftUp,
             .swipeUpRight: KeyBinding(
                 label: "}", action: .commitText("}"), category: nil,
                 returnAction: .commitText("{"), accessibilityLabel: nil
@@ -229,10 +307,7 @@ enum CommonKeys {
                 label: ")", action: .commitText(")"), category: nil,
                 returnAction: .commitText("("), accessibilityLabel: nil
             ),
-            .swipeDown: KeyBinding(
-                label: "⇩", action: .switchMode(ModeNames.main), category: .modifier,
-                returnAction: nil, accessibilityLabel: nil
-            ),
+            .swipeDown: shiftDownHidden,
             .swipeDownRight: KeyBinding(
                 label: "]", action: .commitText("]"), category: nil,
                 returnAction: .commitText("["), accessibilityLabel: nil

@@ -100,6 +100,14 @@ enum InputMethodKind: String, Codable, Equatable {
     case telex
 }
 
+/// Number layer family.
+enum NumericLayoutKind: String, Codable, Equatable {
+    /// Wurstfinger's MessagEase layer: shared punctuation plus circle symbols.
+    case messagEase
+    /// Thumb-Key's number layer.
+    case thumbKey
+}
+
 /// Keyboard-specific settings for a KeyboardDefinition.
 struct KeyboardDefinitionSettings: Codable, Equatable {
     /// Auto-capitalization enabled
@@ -117,24 +125,22 @@ struct KeyboardDefinitionSettings: Codable, Equatable {
     /// `.direct`; set to `.telex` for Vietnamese Telex composition.
     let inputMethod: InputMethodKind
 
-    /// When true, an empty swipe direction on a letter key does nothing instead
-    /// of falling through to the numeric layer's symbol ("ghost keys"). Clean
-    /// Thumb-Key layouts set this so unlabelled directions can't emit stray
-    /// characters like "<" and cause typos.
-    let disableGhostKeys: Bool
+    /// Which number layer the layout uses. Rebuilding the numeric mode at load
+    /// time (numpad style) must keep the same family.
+    let numericLayout: NumericLayoutKind
 
     init(
         autoCapitalize: Bool,
         autoCapitalizers: [AutoCapitalizerRule],
         composeRuleOverrides: ComposeRuleSet?,
         inputMethod: InputMethodKind = .direct,
-        disableGhostKeys: Bool = false
+        numericLayout: NumericLayoutKind = .messagEase
     ) {
         self.autoCapitalize = autoCapitalize
         self.autoCapitalizers = autoCapitalizers
         self.composeRuleOverrides = composeRuleOverrides
         self.inputMethod = inputMethod
-        self.disableGhostKeys = disableGhostKeys
+        self.numericLayout = numericLayout
     }
 }
 
@@ -145,4 +151,10 @@ struct AutoCapitalizerRule: Codable, Equatable {
 
     /// Replacement
     let replacement: String
+
+    /// Thumb-Key's English rules: " i " → " I " and " i'" → " I'".
+    static let englishI: [AutoCapitalizerRule] = [
+        AutoCapitalizerRule(pattern: " i ", replacement: " I "),
+        AutoCapitalizerRule(pattern: " i'", replacement: " I'"),
+    ]
 }

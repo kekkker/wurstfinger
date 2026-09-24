@@ -44,13 +44,75 @@ enum NumericLayouts {
         )
     }
 
+    /// Thumb-Key's number layer (`Numeric.kt`), used by the Thumb-Key
+    /// layouts. `classicOrder` puts 7-8-9 on top; the symbols stay put.
+    static func thumbKey(backToAlphaLabel: String = defaultBackToAlphaLabel, classicOrder: Bool = false) -> KeyboardMode {
+        let digits = classicOrder
+            ? [["7", "8", "9"], ["4", "5", "6"], ["1", "2", "3"]]
+            : [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]]
+        var keys: [String: KeyConfig] = [:]
+        for (rowIdx, row) in digits.enumerated() {
+            for (colIdx, digit) in row.enumerated() {
+                let slotId = GridSlot.allSlots[rowIdx][colIdx]
+                var bindings: [GestureType: KeyBinding] = [:]
+                for (gesture, symbol) in thumbKeySymbols[slotId] ?? [:] {
+                    bindings[gesture] = KeyBinding(
+                        label: symbol, action: .commitText(symbol),
+                        category: nil, returnAction: nil, accessibilityLabel: nil
+                    )
+                }
+                bindings[.tap] = KeyBinding(
+                    label: digit, action: .commitText(digit),
+                    category: .digit, returnAction: nil, accessibilityLabel: nil
+                )
+                keys[slotId] = KeyConfig(
+                    id: slotId, bindings: bindings, swipeMode: .eightWay,
+                    slideType: .none, style: .primary, tapCycleActions: nil
+                )
+            }
+        }
+        keys.merge(utilityKeys(backToAlphaLabel: backToAlphaLabel)) { digit, _ in digit }
+        return KeyboardMode(
+            name: ModeNames.numeric,
+            keys: keys,
+            arrangements: StandardArrangements.numericThumbKey,
+            autoTransitions: [:],
+            doubleTapMode: nil
+        )
+    }
+
+    /// The symbols around each digit on Thumb-Key's number layer, by position.
+    private static let thumbKeySymbols: [String: [GestureType: String]] = {
+        var topLeft: [GestureType: String] = [.swipeDownLeft: "$"]
+        // Thumb-Key adds the local currency when it is not one of $, £, €.
+        if let currency = Locale.current.currencySymbol, !["$", "£", "€"].contains(currency) {
+            topLeft[.swipeDownRight] = currency
+        }
+        return [
+            GridSlot.topLeft: topLeft,
+            GridSlot.topCenter: [
+                .swipeUpLeft: "`", .swipeUp: "^", .swipeUpRight: "´", .swipeRight: "!",
+                .swipeDownRight: "\\", .swipeDownLeft: "/", .swipeLeft: "+",
+            ],
+            GridSlot.topRight: [.swipeLeft: "?", .swipeDownRight: "€", .swipeDownLeft: "£", .swipeDown: "="],
+            GridSlot.midLeft: [.swipeUpLeft: "{", .swipeUpRight: "%", .swipeDownRight: "_", .swipeDownLeft: "[", .swipeLeft: "("],
+            GridSlot.midRight: [.swipeUpLeft: "|", .swipeUpRight: "}", .swipeRight: ")", .swipeDownRight: "]", .swipeDownLeft: "@"],
+            GridSlot.bottomLeft: [.swipeUpLeft: "~", .swipeDownRight: ":", .swipeDownLeft: "<"],
+            GridSlot.bottomCenter: [
+                .swipeUpLeft: "\"", .swipeUpRight: "'", .swipeDownRight: "-", .swipeDown: ".",
+                .swipeDownLeft: "*", .swipeLeft: ",",
+            ],
+            GridSlot.bottomRight: [.swipeUp: "&", .swipeUpRight: "°", .swipeDownRight: ">", .swipeDownLeft: ";", .swipeLeft: "#"],
+        ]
+    }()
+
     // MARK: - Numeric Utility Keys
 
     private static func backToMain(label: String) -> KeyConfig {
         KeyConfig.utility(
             UtilitySlot.symbols, label: label, action: .switchMode(ModeNames.main),
             swipeMode: .eightWay,
-            swipes: CommonKeys.clipboardSwipes
+            swipes: CommonKeys.textEditSwipes
         )
     }
 
@@ -182,14 +244,12 @@ enum NumericLayouts {
                 let slotId = GridSlot.allSlots[rowIdx][colIdx]
 
                 // Start with shared punctuation defaults (same as letter layer),
-                // but remove shift/capsLock bindings that don't apply to numeric.
-                // This intentionally drops the entire binding including any returnAction
-                // (e.g. midRight.swipeUp carries capitalizeWord as returnAction).
+                // but remove the shift bindings that don't apply to numeric.
+                // This intentionally drops the entire binding including its
+                // word-capitalization return action.
                 var bindings: [GestureType: KeyBinding] = [:]
-                for (gesture, binding) in CommonKeys.defaultSlotBindings[slotId] ?? [:] {
-                    if case .switchMode = binding.action {
-                        continue
-                    }
+                for (gesture, binding) in CommonKeys.defaultSlotBindings[slotId] ?? [:]
+                    where binding.resolvedCategory != .modifier {
                     bindings[gesture] = binding
                 }
 

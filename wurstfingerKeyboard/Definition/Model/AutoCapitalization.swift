@@ -26,33 +26,71 @@ enum AutoCapitalization {
         "¿", "¡", // Spanish inverted punctuation
     ]
 
-    /// Determines if the next character should be capitalized based on context.
-    /// Returns true at the start of text or after sentence-ending punctuation followed by whitespace.
-    static func shouldCapitalize(context: String?) -> Bool {
-        // At start of text field
-        guard let context else { return true }
-        if context.isEmpty {
+    /// Whether the next character should be uppercase, following Android's
+    /// `TextUtils.getCapsMode` (which Thumb-Key relies on) for the field's
+    /// capitalization `mode`.
+    ///
+    /// Sentences start at the beginning of a paragraph, or after `.`, `!`, `?`
+    /// (plus `…`) and whitespace. Opening quotes and brackets before the
+    /// cursor and closing ones after the ender are skipped, and a period ending
+    /// a word that contains another period ("e.g.") is treated as an
+    /// abbreviation. CJK enders need no following space.
+    static func shouldCapitalize(context: String?, mode: TextCapitalizationMode = .sentences) -> Bool {
+        switch mode {
+        case .none: return false
+        case .allCharacters: return true
+        case .words, .sentences: break
+        }
+        let characters = Array(context ?? "")
+
+        // Back over opening punctuation right before the cursor.
+        var cursor = characters.count
+        while cursor > 0, isQuote(characters[cursor - 1]) || isPunctuation(characters[cursor - 1], .openPunctuation) {
+            cursor -= 1
+        }
+        // Start of a paragraph, with optional spaces or tabs.
+        var wordStart = cursor
+        while wordStart > 0, characters[wordStart - 1] == " " || characters[wordStart - 1] == "\t" {
+            wordStart -= 1
+        }
+        if wordStart == 0 || characters[wordStart - 1].isNewline {
             return true
         }
-
-        // Only whitespace means start of input
-        if context.allSatisfy(\.isWhitespace) {
-            return true
+        if mode == .words {
+            return cursor != wordStart
         }
-
-        guard let lastChar = context.last else { return false }
-
-        if lastChar.isWhitespace {
-            // A Western ender only triggers when actually followed by whitespace,
-            // so "e.g" does not capitalize the "g" (the ender has no trailing
-            // space) while "Hello. " does.
-            guard let lastNonWhitespace = context.reversed().first(where: { !$0.isWhitespace })
-            else { return true }
-            return sentenceEnders.contains(lastNonWhitespace)
+        if cursor == wordStart {
+            // No whitespace: only CJK enders, which take no space, count.
+            return cjkSentenceEnders.contains(characters[cursor - 1])
         }
+        // Back over closing punctuation after the sentence ender.
+        var end = wordStart
+        while end > 0, isQuote(characters[end - 1]) || isPunctuation(characters[end - 1], .closePunctuation) {
+            end -= 1
+        }
+        guard end > 0, sentenceEnders.contains(characters[end - 1]) else { return false }
+        if characters[end - 1] == "." {
+            // A word that ends with a period but contains another one is an abbreviation.
+            var index = end - 2
+            while index >= 0 {
+                if characters[index] == "." {
+                    return false
+                }
+                if !characters[index].isLetter {
+                    break
+                }
+                index -= 1
+            }
+        }
+        return true
+    }
 
-        // No trailing whitespace: only CJK enders (which need no space) trigger.
-        return cjkSentenceEnders.contains(lastChar)
+    private static func isQuote(_ character: Character) -> Bool {
+        character == "\"" || character == "'"
+    }
+
+    private static func isPunctuation(_ character: Character, _ category: Unicode.GeneralCategory) -> Bool {
+        character.unicodeScalars.first?.properties.generalCategory == category
     }
 
     /// Determines if the next character should be capitalized immediately (without space).
