@@ -23,6 +23,10 @@ final class MockTextTarget: TextInputTarget {
     var documentContextAfterInput: String?
     var selectedText: String?
     var hasFullAccess: Bool = false
+    var capitalizationMode: TextCapitalizationMode = .sentences
+    var fieldKind: TextFieldKind = .text
+    var isSecureTextEntry = false
+    var documentIdentifier: UUID?
 
     func insertText(_ text: String) {
         events.append(.insertText(text))
@@ -38,6 +42,27 @@ final class MockTextTarget: TextInputTarget {
 
     func adjustTextPosition(byCharacterOffset offset: Int) {
         events.append(.adjustCursor(offset))
+    }
+
+    /// Text inserted so far, in order.
+    var insertedTexts: [String] {
+        events.compactMap {
+            if case let .insertText(text) = $0 {
+                text
+            } else {
+                nil
+            }
+        }
+    }
+}
+
+/// Records bridge commands instead of posting them.
+final class MockTextCommandBridge: TextCommandBridge {
+    var isAvailable = true
+    var sent: [TextCommand] = []
+
+    func send(_ command: TextCommand) {
+        sent.append(command)
     }
 }
 
@@ -99,12 +124,21 @@ final class InMemoryUserDefaults: UserDefaults {
 }
 
 /// Creates a KeyboardViewModel wired to a MockTextTarget for testing.
+///
+/// Auto-capitalization is off unless requested, so typing sequences stay
+/// predictable; `settings` pre-populates other defaults.
 func makeViewModel(
     languageId: String = "de_DE",
+    autoCapitalize: Bool = false,
+    settings: [SettingsKey: Any] = [:],
     advanceToNextInputMode: @escaping () -> Void = {},
     dismissKeyboard: @escaping () -> Void = {}
 ) -> (KeyboardViewModel, MockTextTarget) {
     let defaults = InMemoryUserDefaults()
+    defaults.set(autoCapitalize, forKey: SettingsKey.autoCapitalizeEnabled.rawValue)
+    for (key, value) in settings {
+        defaults.set(value, forKey: key.rawValue)
+    }
     let vm = KeyboardViewModel(userDefaults: defaults, shouldPersistSettings: false)
     let target = MockTextTarget()
     vm.bindTextInputTarget(target)

@@ -3,8 +3,8 @@
 //  WurstfingerTests
 //
 //  Tests for ActionContext, ActionPipeline, and the middleware suite
-//  (HapticMiddleware, ComposeMiddleware, TextInputMiddleware,
-//  AutoCapitalizationMiddleware, ModeTransitionMiddleware).
+//  (ComposeMiddleware, TextInputMiddleware, AutoCapitalizationMiddleware,
+//  ModeTransitionMiddleware).
 //
 
 import Foundation
@@ -183,38 +183,6 @@ struct ActionPipelineTests {
         let pipeline = ActionPipeline(middlewares: [])
         // Should not crash.
         pipeline.process(PipelineFixtures.context(action: .commitText("a")))
-    }
-}
-
-// MARK: - HapticMiddleware
-
-struct HapticMiddlewareTests {
-    @Test func triggersFeedbackForAction() {
-        var triggered: [KeyAction] = []
-        let middleware = HapticMiddleware(trigger: { triggered.append($0) })
-        let sink = RecordingMiddleware()
-        let pipeline = ActionPipeline(middlewares: [middleware, sink])
-
-        pipeline.process(PipelineFixtures.context(action: .commitText("a")))
-
-        #expect(triggered == [.commitText("a")])
-        #expect(sink.received.first?.action == .commitText("a"))
-    }
-
-    @Test func forwardsContextUnchanged() {
-        let middleware = HapticMiddleware(trigger: { _ in })
-        let sink = RecordingMiddleware()
-        let pipeline = ActionPipeline(middlewares: [middleware, sink])
-
-        let original = PipelineFixtures.context(
-            action: .deleteBackward,
-            binding: PipelineFixtures.binding(action: .deleteBackward),
-            mode: "shifted"
-        )
-        pipeline.process(original)
-
-        #expect(sink.received.first?.action == .deleteBackward)
-        #expect(sink.received.first?.mode == "shifted")
     }
 }
 
@@ -585,77 +553,73 @@ struct TelexMiddlewareTests {
 
 // MARK: - AutoCapitalizationMiddleware
 
+/// Records what an AutoCapitalizationMiddleware decided.
+private final class ShiftRecorder {
+    var shifts: [Bool] = []
+    var capitalizersRun = 0
+}
+
+private func autoCapMiddleware(
+    enabled: Bool = true,
+    capitalize: Bool,
+    recorder: ShiftRecorder
+) -> AutoCapitalizationMiddleware {
+    AutoCapitalizationMiddleware(
+        isEnabled: { enabled },
+        applyAutoCapitalizers: { recorder.capitalizersRun += 1 },
+        shouldCapitalize: { capitalize },
+        setShifted: { recorder.shifts.append($0) }
+    )
+}
+
 struct AutoCapitalizationMiddlewareTests {
-    @Test func engagesCapitalizationWhenEvaluateReturnsTrue() {
-        var capitalized = 0
-        var released = 0
-        let middleware = AutoCapitalizationMiddleware(
-            evaluate: { true },
-            onCapitalize: { capitalized += 1 },
-            onReleaseCapitalize: { released += 1 }
-        )
-        let pipe = ActionPipeline(middlewares: [middleware])
+    @Test func shiftsWhenNextCharacterShouldBeUppercase() {
+        let recorder = ShiftRecorder()
+        let pipe = ActionPipeline(middlewares: [autoCapMiddleware(capitalize: true, recorder: recorder)])
 
         pipe.process(PipelineFixtures.context(action: .commitText(".")))
         pipe.process(PipelineFixtures.context(action: .space))
 
-        #expect(capitalized == 2)
-        #expect(released == 0)
+        #expect(recorder.shifts == [true, true])
+        #expect(recorder.capitalizersRun == 2)
     }
 
-    @Test func releasesCapitalizationWhenEvaluateReturnsFalse() {
-        var capitalized = 0
-        var released = 0
-        let middleware = AutoCapitalizationMiddleware(
-            evaluate: { false },
-            onCapitalize: { capitalized += 1 },
-            onReleaseCapitalize: { released += 1 }
-        )
-        let pipe = ActionPipeline(middlewares: [middleware])
+    @Test func unshiftsAfterCommittedTextOtherwise() {
+        // This is what makes a manual shift apply to one character only.
+        let recorder = ShiftRecorder()
+        let pipe = ActionPipeline(middlewares: [autoCapMiddleware(capitalize: false, recorder: recorder)])
 
-        pipe.process(PipelineFixtures.context(action: .deleteBackward))
+        pipe.process(PipelineFixtures.context(action: .commitText("A")))
 
-        #expect(capitalized == 0)
-        #expect(released == 1)
+        #expect(recorder.shifts == [false])
     }
 
-    @Test func skipsWhenEvaluateReturnsNil() {
-        // nil means "auto-capitalization disabled in settings".
-        var capitalized = 0
-        var released = 0
-        let middleware = AutoCapitalizationMiddleware(
-            evaluate: { nil },
-            onCapitalize: { capitalized += 1 },
-            onReleaseCapitalize: { released += 1 }
-        )
-        let pipe = ActionPipeline(middlewares: [middleware])
+    @Test func disabledStillUnshiftsButSkipsRules() {
+        let recorder = ShiftRecorder()
+        let pipe = ActionPipeline(middlewares: [autoCapMiddleware(enabled: false, capitalize: true, recorder: recorder)])
 
         pipe.process(PipelineFixtures.context(action: .commitText("a")))
 
-        #expect(capitalized == 0)
-        #expect(released == 0)
+        #expect(recorder.shifts == [false])
+        #expect(recorder.capitalizersRun == 0)
     }
 
-    @Test func ignoresActionsThatDoNotAffectCapitalization() {
-        var evaluated = 0
-        let middleware = AutoCapitalizationMiddleware(
-            evaluate: { evaluated += 1; return true },
-            onCapitalize: {},
-            onReleaseCapitalize: {}
-        )
+    @Test func ignoresActionsThatDoNotCommitText() {
+        let recorder = ShiftRecorder()
         let sink = RecordingMiddleware()
-        let pipe = ActionPipeline(middlewares: [middleware, sink])
+        let pipe = ActionPipeline(middlewares: [autoCapMiddleware(capitalize: true, recorder: recorder), sink])
 
         let actions: [KeyAction] = [
             .moveCursor(offset: 1),
             .copy,
+            .deleteBackward,
             .advanceToNextInputMode,
         ]
         for action in actions {
             pipe.process(PipelineFixtures.context(action: action))
         }
 
-        #expect(evaluated == 0, "Cursor moves and clipboard-only actions don't affect caps")
+        #expect(recorder.shifts.isEmpty, "Only committed text settles the shift state, like Thumb-Key")
         // Pipeline contract: skipped branch must still forward downstream.
         #expect(sink.received.map(\.action) == actions)
     }
@@ -664,33 +628,35 @@ struct AutoCapitalizationMiddlewareTests {
         // Sanity check the static policy so future additions to KeyAction
         // force a deliberate decision here.
         #expect(AutoCapitalizationMiddleware.affectsCapitalization(.commitText("a")))
+        #expect(AutoCapitalizationMiddleware.affectsCapitalization(.replaceLastText(". ", trimCount: 2)))
         #expect(AutoCapitalizationMiddleware.affectsCapitalization(.space))
         #expect(AutoCapitalizationMiddleware.affectsCapitalization(.newline))
-        #expect(AutoCapitalizationMiddleware.affectsCapitalization(.deleteBackward))
-        #expect(AutoCapitalizationMiddleware.affectsCapitalization(.paste))
+        #expect(!AutoCapitalizationMiddleware.affectsCapitalization(.deleteBackward))
+        #expect(!AutoCapitalizationMiddleware.affectsCapitalization(.paste))
         #expect(!AutoCapitalizationMiddleware.affectsCapitalization(.moveCursor(offset: 1)))
         #expect(!AutoCapitalizationMiddleware.affectsCapitalization(.switchMode("main")))
         #expect(!AutoCapitalizationMiddleware.affectsCapitalization(.copy))
     }
 
-    @Test func evaluateRunsAfterDownstreamMiddlewares() {
-        // AutoCap must call next first, then re-evaluate the proxy state
+    @Test func decidesAfterDownstreamMiddlewares() {
+        // AutoCap must call next first, then look at the proxy state
         // (which downstream middlewares may have changed).
-        var evaluationOrder: [String] = []
+        var order: [String] = []
         let autoCap = AutoCapitalizationMiddleware(
-            evaluate: { evaluationOrder.append("evaluate"); return nil },
-            onCapitalize: {},
-            onReleaseCapitalize: {}
+            isEnabled: { true },
+            applyAutoCapitalizers: { order.append("rules") },
+            shouldCapitalize: { order.append("check"); return false },
+            setShifted: { _ in order.append("shift") }
         )
         let rewriter = RewritingMiddleware { action in
-            evaluationOrder.append("downstream")
+            order.append("downstream")
             return action
         }
         let pipe = ActionPipeline(middlewares: [autoCap, rewriter])
 
         pipe.process(PipelineFixtures.context(action: .commitText("x")))
 
-        #expect(evaluationOrder == ["downstream", "evaluate"])
+        #expect(order == ["downstream", "rules", "check", "shift"])
     }
 }
 
@@ -838,25 +804,9 @@ struct PipelineIntegrationTests {
         #expect(target.events == [.insertText("ä")])
     }
 
-    @Test func hapticsFireBeforeTextInput() {
-        var order: [String] = []
-        let target = MockTextInputTarget()
-        let haptic = HapticMiddleware(trigger: { _ in order.append("haptic") })
-        let input = TextInputMiddleware(target: { () -> TextInputTarget? in
-            order.append("input")
-            return target
-        })
-        let pipe = ActionPipeline(middlewares: [haptic, input])
-
-        pipe.process(PipelineFixtures.context(action: .commitText("x")))
-
-        #expect(order == ["haptic", "input"])
-    }
-
     @Test func fullPipelineRunsAllMiddlewaresInOrder() {
         var steps: [String] = []
         let target = MockTextInputTarget()
-        let haptic = HapticMiddleware(trigger: { _ in steps.append("haptic") })
         let compose = ComposeMiddleware(
             compose: { _, _ in nil },
             cycleAccent: { _ in nil },
@@ -868,9 +818,10 @@ struct PipelineIntegrationTests {
             return target
         })
         let autoCap = AutoCapitalizationMiddleware(
-            evaluate: { steps.append("evaluate"); return nil },
-            onCapitalize: {},
-            onReleaseCapitalize: {}
+            isEnabled: { true },
+            applyAutoCapitalizers: {},
+            shouldCapitalize: { steps.append("evaluate"); return false },
+            setShifted: { _ in }
         )
         let transition = ModeTransitionMiddleware(
             definition: modeTransitionDefinition(
@@ -878,14 +829,14 @@ struct PipelineIntegrationTests {
             ),
             onModeChange: { _ in steps.append("transition") }
         )
-        let pipe = ActionPipeline(middlewares: [haptic, compose, input, autoCap, transition])
+        let pipe = ActionPipeline(middlewares: [compose, input, autoCap, transition])
 
         let binding = PipelineFixtures.binding(action: .commitText("a"), category: .letter)
         pipe.process(ActionContext(action: .commitText("a"), binding: binding, mode: "shifted"))
 
         // autoCap and transition both run post-`next`, so they unwind in
         // reverse order: transition (deepest) fires before autoCap.evaluate.
-        #expect(steps == ["haptic", "input", "transition", "evaluate"])
+        #expect(steps == ["input", "transition", "evaluate"])
         #expect(target.events == [.insertText("a")])
     }
 }

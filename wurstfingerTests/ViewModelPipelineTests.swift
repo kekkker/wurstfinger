@@ -129,15 +129,15 @@ struct ViewModelModeTests {
         #expect(vm.activeModeName == ModeNames.capsLock)
     }
 
-    @Test func capsLockSwipeUpStaysInCapsLock() {
+    @Test func capsLockSwipeUpReleasesCapsLock() {
         let (vm, _) = makeViewModel()
         // Activate capsLock
         vm.handleGesture(.swipeUp, keyId: GridSlot.midRight, isReturn: false)
         vm.handleGesture(.swipeUp, keyId: GridSlot.midRight, isReturn: false)
         #expect(vm.activeModeName == ModeNames.capsLock)
-        // Third swipe up — stays in capsLock (no-op)
+        // Third swipe up toggles caps lock off, leaving a one-shot shift (Thumb-Key).
         vm.handleGesture(.swipeUp, keyId: GridSlot.midRight, isReturn: false)
-        #expect(vm.activeModeName == ModeNames.capsLock)
+        #expect(vm.activeModeName == ModeNames.shifted)
     }
 
     @Test func capsLockSwipeDownGoesToMain() {
@@ -170,48 +170,49 @@ struct ViewModelModeTests {
         #expect(vm.activeModeName == ModeNames.numeric)
     }
 
-    @Test func shiftLabelChangesPerMode() throws {
+    @Test func shiftLegendChangesPerMode() throws {
         let (vm, _) = makeViewModel()
 
-        // Main mode: midRight swipeUp label = "⇧"
+        // Main mode: ↑ shows the shift arrow.
         let mainMode = try #require(vm.activeModeFromDefinition)
         let mainMidRight = try #require(mainMode.keys[GridSlot.midRight])
-        #expect(mainMidRight.bindings[.swipeUp]?.label == "⇧")
+        #expect(mainMidRight.bindings[.swipeUp]?.legend == .icon("arrowtriangle.up.fill"))
 
-        // Shifted mode: midRight swipeUp label = "⇧"
+        // Shifted and caps lock: ↑ is the caps-lock toggle, whose icon changes while locked.
         vm.handleGesture(.swipeUp, keyId: GridSlot.midRight, isReturn: false)
         #expect(vm.activeModeName == ModeNames.shifted)
         let shiftedMode = try #require(vm.activeModeFromDefinition)
         let shiftedMidRight = try #require(shiftedMode.keys[GridSlot.midRight])
-        #expect(shiftedMidRight.bindings[.swipeUp]?.label == "⇧")
+        #expect(shiftedMidRight.bindings[.swipeUp]?.action == .toggleCapsLock)
+        #expect(shiftedMidRight.bindings[.swipeUp]?.legend == .capsIcon("capslock", capsLockIcon: "c.circle"))
 
-        // CapsLock mode: midRight swipeUp label = "⇪"
         vm.handleGesture(.swipeUp, keyId: GridSlot.midRight, isReturn: false)
         #expect(vm.activeModeName == ModeNames.capsLock)
         let capsMode = try #require(vm.activeModeFromDefinition)
         let capsMidRight = try #require(capsMode.keys[GridSlot.midRight])
-        #expect(capsMidRight.bindings[.swipeUp]?.label == "⇪")
+        #expect(capsMidRight.bindings[.swipeUp]?.action == .toggleCapsLock)
     }
 
     @Test func shiftDownHiddenInMainVisibleInShiftedAndCapsLock() throws {
         let (vm, _) = makeViewModel()
 
-        // Main mode: midRight swipeDown is removed (only shown in shifted/capsLock)
+        // Main mode: ↓ unshifts but has no legend.
         let mainMode = try #require(vm.activeModeFromDefinition)
         let mainMidRight = try #require(mainMode.keys[GridSlot.midRight])
-        #expect(mainMidRight.bindings[.swipeDown] == nil)
+        #expect(mainMidRight.bindings[.swipeDown]?.action == .toggleShift(false))
+        #expect(mainMidRight.bindings[.swipeDown]?.legend == .hidden)
 
-        // Shifted mode: swipeDown "⇩" is visible
+        // Shifted mode: ↓ shows the unshift arrow.
         vm.handleGesture(.swipeUp, keyId: GridSlot.midRight, isReturn: false)
         let shiftedMode = try #require(vm.activeModeFromDefinition)
         let shiftedMidRight = try #require(shiftedMode.keys[GridSlot.midRight])
-        #expect(shiftedMidRight.bindings[.swipeDown]?.label == "⇩")
+        #expect(shiftedMidRight.bindings[.swipeDown]?.legend == .icon("arrowtriangle.down.fill"))
 
-        // CapsLock mode: swipeDown "⇩" is visible
+        // CapsLock mode: same.
         vm.handleGesture(.swipeUp, keyId: GridSlot.midRight, isReturn: false)
         let capsMode = try #require(vm.activeModeFromDefinition)
         let capsMidRight = try #require(capsMode.keys[GridSlot.midRight])
-        #expect(capsMidRight.bindings[.swipeDown]?.label == "⇩")
+        #expect(capsMidRight.bindings[.swipeDown]?.legend == .icon("arrowtriangle.down.fill"))
     }
 }
 
@@ -219,42 +220,44 @@ struct ViewModelModeTests {
 
 @Suite(.serialized)
 struct ViewModelSlideTests {
-    @Test func spaceSlideTapCommitsSpace() {
+    @Test func spaceTapCommitsSpace() {
         let (vm, target) = makeViewModel()
-        // Use the actual space key from the definition
-        guard let spaceKey = vm.activeModeFromDefinition?.key(for: UtilitySlot.space) else {
-            Issue.record("Space key not found in definition")
-            return
-        }
-        vm.handleSlide(spaceKey, phase: .tap)
+        vm.handleKeyEvent(.tap, keyId: UtilitySlot.space)
         #expect(target.events.contains(.insertText(" ")))
     }
 
-    @Test func deleteSlideProducesDeletions() {
+    @Test func backspaceSlideWithoutBridgeDeletesProgressively() {
         let (vm, target) = makeViewModel()
         target.documentContextBeforeInput = "hello"
-        guard let deleteKey = vm.activeModeFromDefinition?.key(for: UtilitySlot.delete) else {
-            Issue.record("Delete key not found in definition")
-            return
-        }
-        vm.handleSlide(deleteKey, phase: .began)
-        let step = KeyboardConstants.DeleteGestures.dragStep
-        vm.handleSlide(deleteKey, phase: .changed(deltaX: -step * 2))
-        vm.handleSlide(deleteKey, phase: .ended)
-        #expect(target.events.contains(.deleteBackward))
+        vm.handleKeyEvent(.selectionBegan, keyId: UtilitySlot.delete)
+        vm.handleKeyEvent(.selectionChanged(-2), keyId: UtilitySlot.delete)
+        vm.handleKeyEvent(.deleteSelection, keyId: UtilitySlot.delete)
+        #expect(target.events == [.deleteBackward, .deleteBackward])
     }
 
-    @Test func spaceSlideMoveCursor() {
+    @Test func backspaceSlideWithBridgeSelectsThenDeletes() {
         let (vm, target) = makeViewModel()
-        guard let spaceKey = vm.activeModeFromDefinition?.key(for: UtilitySlot.space) else {
-            Issue.record("Space key not found in definition")
-            return
-        }
-        vm.handleSlide(spaceKey, phase: .began)
-        let step = KeyboardConstants.SpaceGestures.dragStep
-        vm.handleSlide(spaceKey, phase: .changed(deltaX: step * 2))
-        vm.handleSlide(spaceKey, phase: .ended)
-        #expect(target.events.contains(.adjustCursor(1)))
+        let bridge = MockTextCommandBridge()
+        vm.textCommandBridge = bridge
+        vm.handleKeyEvent(.selectionBegan, keyId: UtilitySlot.delete)
+        vm.handleKeyEvent(.selectionChanged(-3), keyId: UtilitySlot.delete)
+        vm.handleKeyEvent(.deleteSelection, keyId: UtilitySlot.delete)
+        #expect(bridge.sent == [.beginSelection, .extendSelection(-3)])
+        #expect(target.events == [.deleteBackward])
+    }
+
+    @Test func spaceSlideMovesCursor() {
+        let (vm, target) = makeViewModel()
+        vm.handleKeyEvent(.slideCursor(2), keyId: UtilitySlot.space)
+        #expect(target.events.contains(.adjustCursor(2)))
+    }
+
+    @Test func spaceSlideHoldMovesByCharacterThenWord() {
+        let (vm, target) = makeViewModel()
+        target.documentContextBeforeInput = "hello world"
+        vm.handleKeyEvent(.slideHoldTick(.swipeLeft, word: false), keyId: UtilitySlot.space)
+        vm.handleKeyEvent(.slideHoldTick(.swipeLeft, word: true), keyId: UtilitySlot.space)
+        #expect(target.events == [.adjustCursor(-1), .adjustCursor(-5)])
     }
 }
 
@@ -298,8 +301,8 @@ struct ViewModelVCActionTests {
         let (vm, _) = makeViewModel(
             advanceToNextInputMode: { advanceCalled = true }
         )
-        // Input-method switch is bound to swipe-left on the globe key.
-        vm.handleGesture(.swipeLeft, keyId: UtilitySlot.globe, isReturn: false)
+        // Input-method switch is bound to swipe-down on the emoji (globe) key.
+        vm.handleGesture(.swipeDown, keyId: UtilitySlot.globe, isReturn: false)
         #expect(advanceCalled)
     }
 }

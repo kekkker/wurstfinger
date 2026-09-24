@@ -138,24 +138,18 @@ struct KeyboardGridViewSpanTests {
 
 // MARK: - KeyView Style Rendering
 
+private func makeKeyView(_ key: KeyConfig) -> KeyView {
+    KeyView(
+        key: key,
+        look: KeyLook(),
+        height: 54,
+        makeGestureConfig: { _, _ in KeyGestureConfig() },
+        onTouchDown: {},
+        onEvent: { _, _ in nil }
+    )
+}
+
 struct KeyViewStyleTests {
-    @Test func primaryAndUtilityProduceDifferentFontSizes() {
-        // Primary keys are large, utility keys use the utility label size.
-        // The exact values don't matter; the test guards against the two
-        // styles ever collapsing onto the same rendering path.
-        let primary = KeyView.baseFontSize(for: .primary)
-        let utility = KeyView.baseFontSize(for: .utility)
-        #expect(primary != utility)
-    }
-
-    @Test func utilityIsIconOnly() {
-        #expect(KeyView.isIconOnly(style: .utility))
-        #expect(!KeyView.isIconOnly(style: .primary))
-        #expect(!KeyView.isIconOnly(style: .secondary))
-        #expect(!KeyView.isIconOnly(style: .spacebar))
-        #expect(!KeyView.isIconOnly(style: .accent))
-    }
-
     @Test func primaryLabelFallsBackToKeyId() {
         // A key with no tap binding still has a stable label so it can
         // be debugged in previews.
@@ -167,7 +161,7 @@ struct KeyViewStyleTests {
             style: .primary,
             tapCycleActions: nil
         )
-        let view = KeyView(key: key, onGesture: { _, _, _ in }, onTouchDown: {})
+        let view = makeKeyView(key)
         #expect(view.primaryLabel == "midLeft")
     }
 
@@ -186,7 +180,7 @@ struct KeyViewStyleTests {
             style: .primary,
             tapCycleActions: nil
         )
-        let view = KeyView(key: key, onGesture: { _, _, _ in }, onTouchDown: {})
+        let view = makeKeyView(key)
         #expect(view.primaryLabel == "d")
     }
 
@@ -205,7 +199,7 @@ struct KeyViewStyleTests {
             style: .utility,
             tapCycleActions: nil
         )
-        let view = KeyView(key: key, onGesture: { _, _, _ in }, onTouchDown: {})
+        let view = makeKeyView(key)
         #expect(view.accessibilityLabel == "Löschen")
     }
 }
