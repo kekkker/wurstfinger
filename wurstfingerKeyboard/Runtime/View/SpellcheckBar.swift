@@ -8,6 +8,7 @@ import SwiftUI
 struct SpellcheckBar: View {
     let state: SpellcheckState
     let onSuggestion: (String) -> Void
+    var palette = KeyboardPalette.system
 
     var body: some View {
         HStack(spacing: 8) {
@@ -19,7 +20,7 @@ struct SpellcheckBar: View {
 
                 Text(word)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(state.isMisspelled ? Color.red : Color.secondary)
+                    .foregroundStyle(state.isMisspelled ? Color.red : palette.secondary)
                     .lineLimit(1)
 
                 if state.isMisspelled {
@@ -42,7 +43,7 @@ struct SpellcheckBar: View {
         }
         .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.secondarySystemBackground).opacity(0.82))
+        .background(palette.background)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("spellcheckBar")
     }

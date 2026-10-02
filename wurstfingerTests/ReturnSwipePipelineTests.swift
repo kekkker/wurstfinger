@@ -17,6 +17,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 struct ReturnSwipePipelineTests {
     private func inserts(_ target: MockTextTarget) -> [String] {
         target.events.compactMap {

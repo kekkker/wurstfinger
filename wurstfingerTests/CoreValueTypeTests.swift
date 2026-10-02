@@ -43,10 +43,14 @@ struct KeyActionTests {
 
     @Test func codableRoundtripSimpleCases() throws {
         let cases: [KeyAction] = [
-            .cycleAccents, .capitalizeWord(uppercased: true), .capitalizeWord(uppercased: false),
-            .advanceToNextInputMode, .dismissKeyboard,
-            .deleteBackward, .deleteForward,
+            .cycleAccents, .toggleWordCapitalization(up: true), .toggleWordCapitalization(up: false),
+            .toggleShift(true), .toggleCapsLock, .replaceLastText(", ", trimCount: 1),
+            .advanceToNextInputMode, .dismissKeyboard, .openSettings, .openClipboardHistory,
+            .toggleHideLetters, .cycleKeyboardPosition,
+            .deleteBackward, .deleteForward, .deleteWordBackward, .deleteWordForward,
+            .moveWordBackward, .moveWordForward, .cursorToLineStart, .cursorToTextEnd,
             .space, .newline,
+            .selectAll, .selectLine, .undo, .redo,
             .copy, .paste, .cut, .none,
         ]
         for action in cases {
@@ -100,7 +104,9 @@ struct KeyCategoryTests {
 
     @Test func modifierInference() {
         #expect(KeyAction.switchMode("shifted").inferredCategory == .modifier)
-        #expect(KeyAction.capitalizeWord(uppercased: true).inferredCategory == .modifier)
+        #expect(KeyAction.toggleWordCapitalization(up: true).inferredCategory == .modifier)
+        #expect(KeyAction.toggleShift(true).inferredCategory == .modifier)
+        #expect(KeyAction.toggleCapsLock.inferredCategory == .modifier)
     }
 
     @Test func whitespaceInference() {

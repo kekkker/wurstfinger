@@ -54,6 +54,43 @@ final class DocumentProxyTarget: TextInputTarget {
         controller?.hasFullAccess ?? false
     }
 
+    var capitalizationMode: TextCapitalizationMode {
+        switch proxy?.autocapitalizationType ?? .sentences {
+        case .none: .none
+        case .words: .words
+        case .allCharacters: .allCharacters
+        default: .sentences
+        }
+    }
+
+    var fieldKind: TextFieldKind {
+        guard let proxy else { return .text }
+        if proxy.isSecureTextEntry == true {
+            return .addressOrPassword
+        }
+        switch proxy.keyboardType ?? .default {
+        case .numberPad, .phonePad, .decimalPad, .asciiCapableNumberPad:
+            return .number
+        case .URL, .emailAddress:
+            return .addressOrPassword
+        default:
+            break
+        }
+        let addressTypes: Set<UITextContentType> = [.URL, .emailAddress, .username, .password, .newPassword]
+        if let contentType = proxy.textContentType ?? nil, addressTypes.contains(contentType) {
+            return .addressOrPassword
+        }
+        return .text
+    }
+
+    var isSecureTextEntry: Bool {
+        proxy?.isSecureTextEntry == true
+    }
+
+    var documentIdentifier: UUID? {
+        proxy?.optionalDocumentIdentifier
+    }
+
     var allowsSpellChecking: Bool {
         guard let proxy, proxy.isSecureTextEntry != true else { return false }
 
@@ -74,5 +111,14 @@ final class DocumentProxyTarget: TextInputTarget {
             return false
         }
         return true
+    }
+}
+
+extension UITextDocumentProxy {
+    /// `documentIdentifier` is declared non-optional, yet it is nil until the
+    /// host connects, and bridging that nil to `UUID` traps. Reading it
+    /// through Objective-C keeps nil as nil.
+    var optionalDocumentIdentifier: UUID? {
+        (self as? NSObject)?.value(forKey: "documentIdentifier") as? UUID
     }
 }

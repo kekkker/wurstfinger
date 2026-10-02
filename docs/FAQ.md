@@ -20,8 +20,15 @@ numbers, one-time codes, and card numbers are excluded.
 
 ## Why can't I select text with the keyboard?
 
-**Text selection is controlled by the app**, not the keyboard. Keyboard extensions cannot programmatically select text — they can only move the cursor and read nearby text. To select text, use the standard iOS gestures (long-press, double-tap) directly in the text field.
+**Text selection is controlled by the app**, not the keyboard.
+Keyboard extensions cannot programmatically select text, select all, undo or redo; they can only move the cursor and read nearby text.
+To select text, use the standard iOS gestures (long-press, double-tap) directly in the text field.
 
-Wurstfinger supports **Copy, Cut, and Paste** via swipe gestures on the symbols toggle key (123/ABC): swipe up to copy, up-right to cut, and down to paste. Full Access must be enabled.
+Wurstfinger supports **Copy, Cut, and Paste** via swipe gestures on the symbols toggle key (123/ABC): swipe up to copy, up-right to cut, and down to paste.
+With nothing selected, copy and cut use the whole text around the cursor.
+Full Access must be enabled.
+
+On jailbroken devices, the WurstSecure companion tweak runs these commands inside the app you are typing in.
+With it installed, the 123 key's select all (up-left), undo (down-left) and redo (down-right) swipes work, and sliding on space or backspace can select text, like in Thumb-Key.
 
 > *Reference: [Custom Keyboard Programming Guide](https://developer.apple.com/library/archive/documentation/General/Conceptual/ExtensibilityPG/CustomKeyboard.html) — "a custom keyboard cannot select text"*

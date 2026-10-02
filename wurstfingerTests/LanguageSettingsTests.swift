@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 struct LanguageSettingsTests {
     @Test("Detects German with exact match")
     func detectGermanExactMatch() {
@@ -176,6 +177,7 @@ struct LanguageSettingsTests {
 
 /// Tests the logic that resolves a language ID from UserDefaults into a locale identifier,
 /// matching the primaryLanguage getter in KeyboardViewController.
+@MainActor
 struct PrimaryLanguageResolutionTests {
     /// Helper that mirrors the primaryLanguage getter logic:
     /// read language ID from UserDefaults → resolve to LanguageConfig → return locale identifier
@@ -266,6 +268,7 @@ struct PrimaryLanguageResolutionTests {
 
 // MARK: - Multi-Language Settings Tests
 
+@MainActor
 struct MultiLanguageSettingsTests {
     private func createTestDefaults() -> (UserDefaults, String) {
         let suiteName = "test.multiLang.\(UUID().uuidString)"
@@ -492,6 +495,7 @@ struct MultiLanguageSettingsTests {
 
 // MARK: - Pinned Default Language Tests
 
+@MainActor
 struct PinnedLanguageTests {
     private func createTestDefaults() -> (UserDefaults, String) {
         let suiteName = "test.pinned.\(UUID().uuidString)"
@@ -663,6 +667,7 @@ struct PinnedLanguageTests {
 
 // MARK: - Info.plist PrimaryLanguage Tests
 
+@MainActor
 struct InfoPlistLanguageTests {
     @Test("Keyboard extension Info.plist has PrimaryLanguage set to mul")
     func primaryLanguageIsMul() throws {

@@ -2,49 +2,51 @@
 //  AutoCapitalizationMiddleware.swift
 //  Wurstfinger
 //
-//  Re-evaluates auto-capitalization after text-input actions.
+//  Re-evaluates the shift state after text is committed.
 //
 
 import Foundation
 
-/// Runs after the text-mutating middlewares and asks the host whether the
-/// next character should be capitalized.
+/// Runs after the text-mutating middlewares and settles the shift state the
+/// way Thumb-Key does after every committed text: language auto-capitalizers
+/// run first (e.g. " i " → " I "), then the keyboard shifts when the next
+/// character should be uppercase and unshifts otherwise. That unshift is
+/// what makes a manual shift apply to one character only.
 ///
-/// The actual capitalization decision is delegated to an injected closure
-/// so this file stays independent of the `AutoCapitalization` type (which
-/// is excluded from the `WurstfingerApp` target).
+/// The decisions are injected as closures so this file stays independent of
+/// the view model and the document proxy.
 struct AutoCapitalizationMiddleware: ActionMiddleware {
-    /// Returns `true` when auto-capitalization should engage for the next
-    /// key, `false` when it should disengage, `nil` when no change should
-    /// be made (e.g. auto-capitalization is disabled in settings).
-    let evaluate: () -> Bool?
+    /// Whether auto-capitalization is enabled at all.
+    let isEnabled: () -> Bool
 
-    /// Invoked when auto-capitalization should engage for the next key.
-    let onCapitalize: () -> Void
+    /// Applies the language's text rules before the check.
+    let applyAutoCapitalizers: () -> Void
 
-    /// Invoked when auto-capitalization should disengage.
-    let onReleaseCapitalize: () -> Void
+    /// Whether the next character should be uppercase.
+    let shouldCapitalize: () -> Bool
+
+    /// Shifts (`true`) or unshifts (`false`). The owner ignores this on the
+    /// numeric layer and keeps caps lock.
+    let setShifted: (Bool) -> Void
 
     func process(_ context: ActionContext, next: (ActionContext) -> Void) {
         next(context)
         guard Self.affectsCapitalization(context.action) else { return }
-        switch evaluate() {
-        case .some(true): onCapitalize()
-        case .some(false): onReleaseCapitalize()
-        case .none: break
+        guard isEnabled() else {
+            setShifted(false)
+            return
         }
+        applyAutoCapitalizers()
+        setShifted(shouldCapitalize())
     }
 
-    /// Actions whose result may change whether the next key should be
-    /// auto-capitalized. Kept static so tests can verify the policy
+    /// Actions that commit text. Kept static so tests can verify the policy
     /// without constructing a middleware instance.
     static func affectsCapitalization(_ action: KeyAction) -> Bool {
         switch action {
-        case .commitText, .space, .newline, .deleteBackward, .deleteForward,
-             .compose, .cycleAccents, .paste, .cut, .cutAll, .deleteWord:
+        case .commitText, .replaceLastText, .space, .newline, .compose, .cycleAccents:
             true
-        case .moveCursor, .switchMode, .capitalizeWord, .advanceToNextInputMode,
-             .dismissKeyboard, .copy, .copyAll, .none, .switchToNextLanguage, .openEmoji:
+        default:
             false
         }
     }

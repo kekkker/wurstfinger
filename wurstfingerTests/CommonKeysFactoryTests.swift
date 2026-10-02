@@ -22,30 +22,61 @@ struct CommonKeysTests {
         #expect(keys[UtilitySlot.space] != nil)
     }
 
-    @Test func globeKeyAction() {
+    @Test func globeSlotIsThumbKeysEmojiKey() {
         let globe = CommonKeys.globe
         #expect(globe.id == UtilitySlot.globe)
-        // Tap cycles languages; switching the input method lives on swipe-left.
-        #expect(globe.bindings[.tap]?.action == .switchToNextLanguage)
-        #expect(globe.bindings[.swipeLeft]?.action == .advanceToNextInputMode)
+        #expect(globe.bindings[.tap]?.action == .openEmoji)
+        #expect(globe.bindings[.swipeUp]?.action == .openSettings)
+        #expect(globe.bindings[.swipeUpLeft]?.action == .toggleHideLetters)
+        #expect(globe.bindings[.swipeLeft]?.action == .switchToNextLanguage)
+        #expect(globe.bindings[.swipeRight]?.action == .cycleKeyboardPosition)
+        #expect(globe.bindings[.swipeDown]?.action == .advanceToNextInputMode)
+        #expect(globe.bindings[.swipeDownLeft]?.action == .dismissKeyboard)
         #expect(globe.style == .utility)
     }
 
-    @Test func deleteKeyHasSlideType() {
+    @Test func deleteKeyDeletesWords() {
         let delete = CommonKeys.delete
         #expect(delete.slideType == .delete)
         #expect(delete.swipeMode == .twoWayHorizontal)
+        #expect(delete.bindings[.swipeLeft]?.action == .deleteWordBackward)
+        #expect(delete.bindings[.swipeRight]?.action == .deleteWordForward)
+        #expect(delete.bindings[.longPress]?.action == .deleteWordBackward)
+        #expect(delete.bindings[.swipeLeft]?.legend == .hidden)
     }
 
-    @Test func spacebarHasMoveCursorSlide() {
+    @Test func spacebarMovesCursorAndCyclesPunctuation() {
         let space = CommonKeys.spacebar
         #expect(space.slideType == .moveCursor)
+        #expect(space.swipeMode == .eightWay)
         #expect(space.bindings[.tap]?.action == .space)
+        #expect(space.bindings[.swipeLeft]?.action == .moveCursor(offset: -1))
+        #expect(space.bindings[.swipeRight]?.action == .moveCursor(offset: 1))
+        #expect(space.bindings[.swipeDownLeft]?.action == .moveWordBackward)
+        #expect(space.bindings[.swipeDownRight]?.action == .moveWordForward)
+        #expect(space.bindings[.swipeUp]?.action == .cursorToLineStart)
+        #expect(space.bindings[.swipeUp]?.returnAction == .cursorToTextStart)
+        #expect(space.bindings[.swipeDown]?.returnAction == .cursorToTextEnd)
+        #expect(space.tapCycleActions?.first == .replaceLastText(", ", trimCount: 1))
+        #expect(space.tapCycleActions?.count == 6)
     }
 
-    @Test func symbolsKeySwitchesToNumeric() {
+    @Test func symbolsKeySwitchesToNumericWithTextEditSwipes() {
         let symbols = CommonKeys.symbols
         #expect(symbols.bindings[.tap]?.action == .switchMode(ModeNames.numeric))
+        #expect(symbols.bindings[.swipeUp]?.action == .copy)
+        #expect(symbols.bindings[.swipeUpLeft]?.action == .selectAll)
+        #expect(symbols.bindings[.swipeUpLeft]?.returnAction == .selectLine)
+        #expect(symbols.bindings[.swipeUpRight]?.action == .cut)
+        #expect(symbols.bindings[.swipeDownLeft]?.action == .undo)
+        #expect(symbols.bindings[.swipeDownRight]?.action == .redo)
+        #expect(symbols.bindings[.swipeDown]?.action == .paste)
+        #expect(symbols.bindings[.swipeDown]?.returnAction == .openClipboardHistory)
+    }
+
+    @Test func returnLongPressIsNewline() {
+        #expect(CommonKeys.return.bindings[.tap]?.action == .newline)
+        #expect(CommonKeys.return.bindings[.longPress]?.action == .newline)
     }
 
     @Test func defaultSlotBindingsCoversAllNonCenterSlots() {
@@ -65,9 +96,11 @@ struct CommonKeysTests {
     @Test func midRightSwipeUpIsShift() throws {
         let midRight = try #require(CommonKeys.defaultSlotBindings[GridSlot.midRight])
         let shiftBinding = try #require(midRight[.swipeUp])
-        #expect(shiftBinding.action == .switchMode(ModeNames.shifted))
-        #expect(shiftBinding.returnAction == .capitalizeWord(uppercased: true))
+        #expect(shiftBinding.action == .toggleShift(true))
+        #expect(shiftBinding.returnAction == .toggleWordCapitalization(up: true))
         #expect(shiftBinding.resolvedCategory == .modifier)
+        #expect(midRight[.swipeDown]?.action == .toggleShift(false))
+        #expect(midRight[.swipeDown]?.returnAction == .toggleWordCapitalization(up: false))
     }
 
     @Test func topCenterComposeBindings() throws {
@@ -199,39 +232,55 @@ struct GridKeyboardFactoryTests {
         #expect(topLeft.bindings[.swipeRight]?.action == .commitText("-"))
     }
 
-    @Test func shiftedModeAutoTransitionsToMain() throws {
+    @Test func shiftedModeHasNoAutoTransitions() throws {
+        // One-shot shift comes from the auto-capitalization middleware, which
+        // unshifts after any committed text (Thumb-Key).
         let shifted = try #require(Self.testLayout.modes[ModeNames.shifted])
-        #expect(shifted.autoTransitions[.letter] == ModeNames.main)
+        #expect(shifted.autoTransitions.isEmpty)
     }
 
-    @Test func shiftedSwipeUpPointsToCapsLock() throws {
+    @Test func shiftedSwipeUpTogglesCapsLock() throws {
         let shifted = try #require(Self.testLayout.modes[ModeNames.shifted])
         let midRight = try #require(shifted.keys[GridSlot.midRight])
         let swipeUp = try #require(midRight.bindings[.swipeUp])
-        #expect(swipeUp.action == .switchMode(ModeNames.capsLock))
-        #expect(swipeUp.label == "⇧")
+        #expect(swipeUp.action == .toggleCapsLock)
+        #expect(swipeUp.legend == .capsIcon("capslock", capsLockIcon: "c.circle"))
     }
 
-    @Test func capsLockSwipeUpIsNoOpWithCapsLockIcon() throws {
+    @Test func capsLockSharesShiftedKeys() throws {
         let capsLock = try #require(Self.testLayout.modes[ModeNames.capsLock])
-        let midRight = try #require(capsLock.keys[GridSlot.midRight])
-        let swipeUp = try #require(midRight.bindings[.swipeUp])
-        #expect(swipeUp.action == .switchMode(ModeNames.capsLock))
-        #expect(swipeUp.label == "⇪")
-    }
-
-    @Test func capsLockHasNoAutoTransitions() throws {
-        let capsLock = try #require(Self.testLayout.modes[ModeNames.capsLock])
+        let shifted = try #require(Self.testLayout.modes[ModeNames.shifted])
+        #expect(capsLock.keys == shifted.keys)
         #expect(capsLock.autoTransitions.isEmpty)
         #expect(capsLock.doubleTapMode == nil)
     }
 
-    @Test func mainModeShiftLabelIsUpArrow() throws {
+    @Test func mainModeShiftLegendIsUpArrow() throws {
         let main = try #require(Self.testLayout.modes[ModeNames.main])
         let midRight = try #require(main.keys[GridSlot.midRight])
         let swipeUp = try #require(midRight.bindings[.swipeUp])
-        #expect(swipeUp.action == .switchMode(ModeNames.shifted))
-        #expect(swipeUp.label == "⇧")
+        #expect(swipeUp.action == .toggleShift(true))
+        #expect(swipeUp.legend == .icon("arrowtriangle.up.fill"))
+    }
+
+    @Test func thumbKeyLayoutsUseThumbKeyNumberLayer() throws {
+        let definition = try #require(KeyboardRegistry.load(id: "en_US_thumbkey"))
+        #expect(definition.settings.numericLayout == .thumbKey)
+        let numeric = try #require(definition.modes[ModeNames.numeric])
+        #expect(numeric.keys[GridSlot.bottomCenter]?.bindings[.swipeLeft]?.action == .commitText(","))
+        let zero = try #require(numeric.arrangement(for: .portrait)?.rows.last?.first)
+        #expect(zero.keyId == GridSlot.zero)
+        #expect(zero.widthMultiplier == 2)
+    }
+
+    @Test func thumbKeyLayoutsUseThumbKeyDirectionZones() throws {
+        let main = try #require(KeyboardRegistry.load(id: "en_US_thumbkey")?.modes[ModeNames.main])
+        #expect(main.keys[GridSlot.topLeft]?.swipeMode == .fourWayDiagonal)
+        #expect(main.keys[GridSlot.topCenter]?.swipeMode == .twoWayVertical)
+        #expect(main.keys[GridSlot.midLeft]?.swipeMode == .twoWayHorizontal)
+        #expect(main.keys[GridSlot.center]?.swipeMode == .eightWay)
+        #expect(main.keys[GridSlot.midRight]?.swipeMode == .fourWayCross)
+        #expect(main.keys[GridSlot.bottomCenter]?.bindings[.swipeDown]?.legend == .muted)
     }
 
     @Test func shiftedLettersAreUppercased() throws {

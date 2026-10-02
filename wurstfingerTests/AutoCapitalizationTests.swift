@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import WurstfingerApp
 
+@MainActor
 struct AutoCapitalizationTests {
     // MARK: - shouldCapitalize tests (pure logic, no ViewModel)
 

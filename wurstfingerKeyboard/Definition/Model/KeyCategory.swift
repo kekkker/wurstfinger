@@ -33,15 +33,20 @@ extension KeyAction {
                 return .digit
             }
             return .symbol
+        case .replaceLastText: return .symbol
         case .compose: return .compose
         case .cycleAccents: return .compose
-        case .switchMode: return .modifier
-        case .capitalizeWord: return .modifier
+        case .switchMode, .toggleShift, .toggleCapsLock: return .modifier
+        case .toggleWordCapitalization: return .modifier
         case .space, .newline: return .whitespace
-        case .deleteBackward, .deleteForward, .moveCursor,
-             .advanceToNextInputMode, .dismissKeyboard, .switchToNextLanguage, .openEmoji:
+        case .deleteBackward, .deleteForward, .deleteWordBackward, .deleteWordForward,
+             .moveCursor, .moveWordBackward, .moveWordForward,
+             .cursorToLineStart, .cursorToLineEnd, .cursorToTextStart, .cursorToTextEnd:
             return .utility
-        case .copy, .paste, .cut, .copyAll, .cutAll, .deleteWord: return .utility
+        case .advanceToNextInputMode, .dismissKeyboard, .switchToNextLanguage, .openEmoji,
+             .openClipboardHistory, .openSettings, .toggleHideLetters, .cycleKeyboardPosition:
+            return .utility
+        case .selectAll, .selectLine, .undo, .redo, .copy, .paste, .cut: return .utility
         case .none: return .utility
         }
     }

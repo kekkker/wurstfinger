@@ -26,6 +26,12 @@ enum GridKeyboardFactory {
     ///   - inputMethod: Which input method is applied to committed characters.
     ///     Defaults to `.direct`; Vietnamese layouts should pass `.telex` so
     ///     that `TelexMiddleware` activates for this keyboard at runtime.
+    ///   - cleanLetters: Thumb-Key style: drop the shared MessagEase
+    ///     punctuation from letter keys (keeping shift), mute the remaining
+    ///     punctuation legends, and use Thumb-Key's number layer.
+    ///   - swipeModes: Per-slot direction zones (Thumb-Key's `swipeType`).
+    ///     Slots not listed accept all 8 directions.
+    ///   - autoCapitalizers: Language text rules applied after typing.
     static func layout(
         id: String,
         title: String,
@@ -34,7 +40,9 @@ enum GridKeyboardFactory {
         directionalOverrides: [String: [GestureType: String]] = [:],
         numericBackToAlphaLabel: String = NumericLayouts.defaultBackToAlphaLabel,
         inputMethod: InputMethodKind = .direct,
-        cleanLetters: Bool = false
+        cleanLetters: Bool = false,
+        swipeModes: [String: SwipeMode] = [:],
+        autoCapitalizers: [AutoCapitalizerRule] = []
     ) -> KeyboardDefinition {
         precondition(
             centerCharacters.count == 3 && centerCharacters.allSatisfy { $0.count == 3 },
@@ -60,16 +68,15 @@ enum GridKeyboardFactory {
                     : slotDefaults
 
                 // Apply language-specific overrides (replace default binding for that gesture).
-                // Letters get an auto-generated uppercase return action.
+                // Swipe-and-return on a letter types it in the opposite case
+                // (resolved from the other layer), so no return action is needed.
                 if let overrides = directionalOverrides[slotId] {
                     for (gesture, text) in overrides {
                         let isLetter = text.unicodeScalars.contains { CharacterSet.letters.contains($0) }
-                        let returnAction: KeyAction? = isLetter
-                            ? .commitText(text.keyboardUppercased(with: locale))
-                            : nil
                         bindings[gesture] = KeyBinding(
                             label: text, action: .commitText(text),
-                            category: nil, returnAction: returnAction, accessibilityLabel: nil
+                            category: nil, returnAction: nil, accessibilityLabel: nil,
+                            legend: cleanLetters && !isLetter ? .muted : nil
                         )
                     }
                 }
@@ -81,7 +88,7 @@ enum GridKeyboardFactory {
                 )
 
                 letterKeys[slotId] = KeyConfig(
-                    id: slotId, bindings: bindings, swipeMode: .eightWay,
+                    id: slotId, bindings: bindings, swipeMode: swipeModes[slotId] ?? .eightWay,
                     slideType: .none, style: .primary, tapCycleActions: nil
                 )
             }
@@ -90,8 +97,8 @@ enum GridKeyboardFactory {
         // 2. Merge utility keys
         let allKeys = letterKeys.merging(CommonKeys.allUtilityKeys) { letter, _ in letter }
 
-        // 3. Build base mode with all keys (includes shift-down on midRight)
-        let baseMode = KeyboardMode(
+        // 3. Main layer: ↑ shifts, ↓ unshifts (no legend).
+        let mainMode = KeyboardMode(
             name: ModeNames.main,
             keys: allKeys,
             arrangements: arrangements,
@@ -99,41 +106,35 @@ enum GridKeyboardFactory {
             doubleTapMode: nil
         )
 
-        // Generate the shifted base once and derive both shifted + caps lock.
-        let shiftedBase = baseMode.generateShifted(locale: locale)
+        // 4. Shifted and caps lock share the uppercased keys; ↑ toggles caps
+        // lock (its legend changes while locked) and ↓ unshifts.
+        let shiftedBase = mainMode.generateShifted(locale: locale)
+            .replacingBinding(keyId: GridSlot.midRight, gesture: .swipeUp, with: CommonKeys.capsLockToggle)
+            .replacingBinding(keyId: GridSlot.midRight, gesture: .swipeDown, with: CommonKeys.shiftDown)
+        let capsLockMode = shiftedBase.with(name: ModeNames.capsLock)
 
-        // 4. Shifted — shift-up points directly to capsLock (label stays ⇧).
-        let shiftedMode = shiftedBase
-            .with(autoTransitions: [.letter: ModeNames.main])
-            .replacingShiftUpBinding(label: "⇧", action: .switchMode(ModeNames.capsLock))
+        let numericMode = cleanLetters
+            ? NumericLayouts.thumbKey(backToAlphaLabel: numericBackToAlphaLabel)
+            : NumericLayouts.phone(backToAlphaLabel: numericBackToAlphaLabel)
 
-        // 5. Caps lock — shift-up is no-op (stays in capsLock), label shows ⇪.
-        let capsLockMode = shiftedBase
-            .with(name: ModeNames.capsLock)
-            .replacingShiftUpBinding(label: "⇪", action: .switchMode(ModeNames.capsLock))
-
-        // 6. Main mode — remove shift-down hint from midRight (only shown in shifted/capsLock).
-        let mainMode = baseMode
-            .removingBinding(keyId: GridSlot.midRight, gesture: .swipeDown)
-
-        // 7. Assemble definition
+        // 5. Assemble definition
         return KeyboardDefinition(
             title: title,
             id: id,
             localeIdentifier: localeIdentifier,
             modes: [
                 ModeNames.main: mainMode,
-                ModeNames.shifted: shiftedMode,
+                ModeNames.shifted: shiftedBase,
                 ModeNames.capsLock: capsLockMode,
-                ModeNames.numeric: NumericLayouts.phone(backToAlphaLabel: numericBackToAlphaLabel),
+                ModeNames.numeric: numericMode,
             ],
             defaultMode: ModeNames.main,
             settings: KeyboardDefinitionSettings(
                 autoCapitalize: true,
-                autoCapitalizers: [],
+                autoCapitalizers: autoCapitalizers,
                 composeRuleOverrides: nil,
                 inputMethod: inputMethod,
-                disableGhostKeys: cleanLetters
+                numericLayout: cleanLetters ? .thumbKey : .messagEase
             ),
             numericBackToAlphaLabel: numericBackToAlphaLabel
         )

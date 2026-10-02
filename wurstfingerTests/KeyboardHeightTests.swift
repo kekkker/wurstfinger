@@ -8,41 +8,46 @@ import Testing
 @testable import WurstfingerApp
 
 struct KeyboardHeightTests {
-    @Test("Full-scale rendered height matches the base height")
-    func fullScaleMatchesBaseHeight() {
-        let aspectRatio: CGFloat = 1.25
-        let rendered = KeyboardConstants.Calculations.renderedHeight(
-            aspectRatio: aspectRatio,
-            scale: 1
-        )
+    private typealias Calc = KeyboardConstants.Calculations
 
-        #expect(abs(rendered - KeyboardConstants.Calculations.baseHeight(
-            aspectRatio: aspectRatio
-        )) < 0.0001)
+    @Test("Default aspect ratio makes square keys, like Thumb-Key")
+    func defaultKeysAreSquare() {
+        let gridWidth = Calc.gridWidth(viewWidth: 430, screenShortestSide: 430, scale: 1, split: false)
+        let height = Calc.keyHeight(gridWidth: gridWidth, columns: 4, aspectRatio: DeviceLayoutUtils.defaultKeyAspectRatio)
+        #expect(height == 107.5)
     }
 
-    @Test("Compact height scales keys but preserves fixed layout spacing")
-    func compactHeightPreservesFixedSpacing() {
-        let aspectRatio: CGFloat = 1.25
-        let scale: CGFloat = 0.5
-        let rowCount = CGFloat(KeyboardConstants.KeyDimensions.totalRows)
-        let scaledKeys = KeyboardConstants.Calculations.keyHeight(
-            aspectRatio: aspectRatio
-        ) * scale * rowCount
-        let fixedSpacing = KeyboardConstants.Layout.gridVerticalSpacing *
-            CGFloat(KeyboardConstants.KeyDimensions.totalRows - 1) +
+    @Test("Wider aspect ratios make flatter keys")
+    func aspectRatioIsWidthOverHeight() {
+        #expect(Calc.keyHeight(gridWidth: 324, columns: 4, aspectRatio: 1.62) == 50)
+    }
+
+    @Test("Scale shrinks the grid and the keys with it")
+    func scaleShrinksKeys() {
+        let gridWidth = Calc.gridWidth(viewWidth: 430, screenShortestSide: 430, scale: 0.5, split: false)
+        #expect(gridWidth == 215)
+        #expect(Calc.keyHeight(gridWidth: gridWidth, columns: 4, aspectRatio: 1) == 53.75)
+    }
+
+    @Test("Landscape keeps the portrait grid width")
+    func landscapeUsesShortSide() {
+        #expect(Calc.gridWidth(viewWidth: 932, screenShortestSide: 430, scale: 1, split: false) == 430)
+    }
+
+    @Test("Each split copy is at most half the view")
+    func splitHalvesTheGrid() {
+        #expect(Calc.gridWidth(viewWidth: 430, screenShortestSide: 430, scale: 1, split: true) == 215)
+        #expect(Calc.gridWidth(viewWidth: 430, screenShortestSide: 430, scale: 0.4, split: true) == 172)
+    }
+
+    @Test("Rendered height adds the fixed bar to the key rows")
+    func renderedHeightAddsFixedParts() {
+        let rows = KeyboardConstants.KeyDimensions.totalRows
+        let fixed = KeyboardConstants.Layout.gridVerticalSpacing * CGFloat(rows - 1) +
             KeyboardConstants.Layout.verticalPaddingTop +
             KeyboardConstants.Layout.verticalPaddingBottom +
             KeyboardConstants.Layout.spellcheckBarHeight
-
-        let rendered = KeyboardConstants.Calculations.renderedHeight(
-            aspectRatio: aspectRatio,
-            scale: scale
-        )
-
-        #expect(abs(rendered - (scaledKeys + fixedSpacing)) < 0.0001)
-        #expect(rendered > KeyboardConstants.Calculations.baseHeight(
-            aspectRatio: aspectRatio
-        ) * scale)
+        #expect(abs(Calc.renderedHeight(keyHeight: 50) - (50 * CGFloat(rows) + fixed)) < 0.0001)
+        #expect(Calc.renderedHeight(keyHeight: 50, rows: 3) < Calc.renderedHeight(keyHeight: 50))
     }
 }

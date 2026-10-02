@@ -44,46 +44,65 @@ struct KeyboardRegistryTests {
     }
 
     @Test func loadReturnsCorrectDefinition() {
-        KeyboardRegistry.evictAll()
         let definition = KeyboardRegistry.load(id: LanguageDefinitions.german.id)
         #expect(definition != nil)
         #expect(definition?.id == LanguageDefinitions.german.id)
         #expect(definition?.title == LanguageDefinitions.german.title)
     }
 
-    @Test func loadCachesResult() {
-        KeyboardRegistry.evictAll()
-        #expect(!KeyboardRegistry.isCached(id: LanguageDefinitions.german.id))
-        let first = KeyboardRegistry.load(id: LanguageDefinitions.german.id)
-        #expect(first != nil)
-        #expect(KeyboardRegistry.isCached(id: LanguageDefinitions.german.id))
-        let second = KeyboardRegistry.load(id: LanguageDefinitions.german.id)
-        #expect(first == second)
-    }
-
     @Test func loadNonexistentReturnsNil() {
         #expect(KeyboardRegistry.load(id: "nonexistent_layout") == nil)
     }
+}
+
+/// Uses its own cache, since the registry's is shared by every test running in parallel.
+struct DefinitionCacheTests {
+    private let cache = DefinitionCache(definitions: [LanguageDefinitions.german, LanguageDefinitions.english])
+
+    @Test func loadCachesResult() {
+        #expect(!cache.isCached(id: LanguageDefinitions.german.id))
+        let first = cache.load(id: LanguageDefinitions.german.id)
+        #expect(first != nil)
+        #expect(cache.isCached(id: LanguageDefinitions.german.id))
+        let second = cache.load(id: LanguageDefinitions.german.id)
+        #expect(first == second)
+    }
+
+    @Test func unknownIdIsNotCached() {
+        #expect(cache.load(id: "nonexistent_layout") == nil)
+        #expect(!cache.isCached(id: "nonexistent_layout"))
+    }
 
     @Test func evictRemovesFromCache() {
-        KeyboardRegistry.evictAll()
-        _ = KeyboardRegistry.load(id: LanguageDefinitions.german.id)
-        #expect(KeyboardRegistry.isCached(id: LanguageDefinitions.german.id))
-        KeyboardRegistry.evict(id: LanguageDefinitions.german.id)
-        #expect(!KeyboardRegistry.isCached(id: LanguageDefinitions.german.id))
-        // After evict, load should still work (rebuilds from LanguageDefinitions)
-        let reloaded = KeyboardRegistry.load(id: LanguageDefinitions.german.id)
-        #expect(reloaded != nil)
+        _ = cache.load(id: LanguageDefinitions.german.id)
+        #expect(cache.isCached(id: LanguageDefinitions.german.id))
+        cache.evict(id: LanguageDefinitions.german.id)
+        #expect(!cache.isCached(id: LanguageDefinitions.german.id))
+        // After evict, load should still work (rebuilds from the definitions)
+        #expect(cache.load(id: LanguageDefinitions.german.id) != nil)
     }
 
     @Test func evictAllClearsCache() {
-        // Load a few definitions
-        _ = KeyboardRegistry.load(id: LanguageDefinitions.german.id)
-        _ = KeyboardRegistry.load(id: LanguageDefinitions.english.id)
-        #expect(KeyboardRegistry.isCached(id: LanguageDefinitions.german.id))
-        #expect(KeyboardRegistry.isCached(id: LanguageDefinitions.english.id))
-        KeyboardRegistry.evictAll()
-        #expect(!KeyboardRegistry.isCached(id: LanguageDefinitions.german.id))
-        #expect(!KeyboardRegistry.isCached(id: LanguageDefinitions.english.id))
+        _ = cache.load(id: LanguageDefinitions.german.id)
+        _ = cache.load(id: LanguageDefinitions.english.id)
+        #expect(cache.isCached(id: LanguageDefinitions.german.id))
+        #expect(cache.isCached(id: LanguageDefinitions.english.id))
+        cache.evictAll()
+        #expect(!cache.isCached(id: LanguageDefinitions.german.id))
+        #expect(!cache.isCached(id: LanguageDefinitions.english.id))
+    }
+
+    @Test func concurrentLoadsAreSafe() async {
+        await withTaskGroup(of: Void.self) { group in
+            for index in 0 ..< 200 {
+                group.addTask {
+                    if index.isMultiple(of: 10) {
+                        cache.evictAll()
+                    }
+                    _ = cache.load(id: index.isMultiple(of: 2) ? LanguageDefinitions.german.id : LanguageDefinitions.english.id)
+                }
+            }
+        }
+        #expect(cache.load(id: LanguageDefinitions.english.id) != nil)
     }
 }

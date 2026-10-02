@@ -50,7 +50,7 @@ struct InteractiveKeyboardPreview: View {
     @StateObject private var previewTarget = PreviewTextTarget()
 
     init(
-        aspectRatio: Binding<Double> = .constant(1.5),
+        aspectRatio: Binding<Double> = .constant(DeviceLayoutUtils.defaultKeyAspectRatio),
         scale: Binding<Double> = .constant(1.0),
         position: Binding<Double> = .constant(0.5)
     ) {
@@ -60,9 +60,19 @@ struct InteractiveKeyboardPreview: View {
     }
 
     private var previewHeight: CGFloat {
+        let screen = DeviceLayoutUtils.screenBounds
+        let gridWidth = KeyboardConstants.Calculations.gridWidth(
+            viewWidth: previewViewModel.viewWidth,
+            screenShortestSide: min(screen.width, screen.height),
+            scale: scale,
+            split: SharedDefaults.store.bool(forKey: SettingsKey.keyboardSplit.rawValue)
+        )
         let renderedHeight = KeyboardConstants.Calculations.renderedHeight(
-            aspectRatio: previewViewModel.keyAspectRatio,
-            scale: scale
+            keyHeight: KeyboardConstants.Calculations.keyHeight(
+                gridWidth: gridWidth,
+                columns: KeyboardConstants.KeyDimensions.totalColumns,
+                aspectRatio: aspectRatio
+            )
         )
         return min(
             KeyboardConstants.Preview.maxHeight,

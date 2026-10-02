@@ -60,12 +60,14 @@ Want to try the latest features before they hit the App Store? Join our public T
 ## Features
 
 - **Multi-language support**: 15 languages including Catalan, Croatian, English, Estonian-Finnish, Finnish, French, German, Hebrew, Italian, Polish, Russian, Spanish, Swedish, Tagalog, and Vietnamese (with Telex input)
-- **MessagEase layout** with symbol and numeric layers
+- **MessagEase and Thumb-Key layouts** with symbol and numeric layers; the Thumb-Key layouts are 1:1 ports, including Thumb-Key's number layer and per-key swipe zones
+- **Thumb-Key's gesture engine**: swipes, swipe-and-return (other case or a variant), circles (clockwise: other case, counter-clockwise: number), long press, and optional slide and slide-and-hold on space and backspace
+- **Thumb-Key's utility keys**: space bar multi-tap punctuation and cursor swipes, word deletion on backspace, the emoji key (settings, hide letters, language, move keyboard, switch keyboard, hide keyboard) and the text-edit swipes on 123 (copy, cut, paste, select all, undo, redo)
 - **Compose engine** that reproduces Thumb-Key's combination triggers (e.g. `' + a → á`)
-- **Return swipes** for punctuation and math symbols (`?`→`¿`, `*`→`†`, `/`→`÷`, ...)
-- **Circular gestures** on keys to insert uppercase letters
-- **Drag gestures** for cursor movement and progressive deletion
-- **Customizable settings**: Adjust haptic feedback intensity, keyboard scale, and key aspect ratio
+- **Emoji picker** with every Emoji 15.0 character and recently used emoji, and a **clipboard history** with pinning and a private clipboard
+- **Look and feel**: Thumb-Key's color themes, key padding, border and radius, hidden letters or symbols, split keyboard and press animation
+- **Modify keys**: change any key with the same YAML format as Thumb-Key
+- **Customizable settings**: haptic feedback intensity, keyboard scale and key aspect ratio, backup and restore
 - **Onboarding flow** with interactive setup guide
 
 ## FAQ

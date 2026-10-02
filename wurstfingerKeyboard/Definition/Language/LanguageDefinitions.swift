@@ -63,7 +63,8 @@ enum LanguageDefinitions {
             GridSlot.bottomLeft: [.swipeUpRight: "y"],
             GridSlot.bottomCenter: [.swipeUp: "w", .swipeRight: "z"],
             GridSlot.bottomRight: [.swipeUpLeft: "f"],
-        ]
+        ],
+        autoCapitalizers: AutoCapitalizerRule.englishI
     )
 
     // MARK: - Estonian-Finnish
@@ -463,7 +464,17 @@ enum LanguageDefinitions {
             ],
             GridSlot.bottomRight: [.swipeUpLeft: "d"],
         ],
-        cleanLetters: true
+        cleanLetters: true,
+        swipeModes: [
+            GridSlot.topLeft: .fourWayDiagonal,
+            GridSlot.topCenter: .twoWayVertical,
+            GridSlot.topRight: .fourWayDiagonal,
+            GridSlot.midLeft: .twoWayHorizontal,
+            GridSlot.midRight: .fourWayCross,
+            GridSlot.bottomLeft: .fourWayDiagonal,
+            GridSlot.bottomRight: .fourWayDiagonal,
+        ],
+        autoCapitalizers: AutoCapitalizerRule.englishI
     )
 
     // MARK: - Russian (Thumb-Key)
@@ -498,7 +509,13 @@ enum LanguageDefinitions {
             GridSlot.bottomRight: [.swipeUpLeft: "д", .swipeRight: "ё", .swipeDown: "ю"],
         ],
         numericBackToAlphaLabel: "абв",
-        cleanLetters: true
+        cleanLetters: true,
+        swipeModes: [
+            GridSlot.topCenter: .twoWayVertical,
+            GridSlot.topRight: .fourWayDiagonal,
+            GridSlot.midLeft: .fourWayCross,
+            GridSlot.midRight: .fourWayCross,
+        ]
     )
 
     // MARK: - Registry

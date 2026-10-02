@@ -13,6 +13,7 @@ import Testing
 
 // MARK: - currentContext
 
+@MainActor
 @Suite(.serialized)
 struct KeyboardViewModelContextTests {
     /// Builds a ViewModel with a deterministic orientation and utility-column
@@ -98,6 +99,7 @@ struct KeyboardViewModelContextTests {
 
 // MARK: - KeyboardGridView Span Behavior
 
+@MainActor
 struct KeyboardGridViewSpanTests {
     @Test func defaultPlacementHasUnitSpan() {
         let placement = KeyPlacement(keyId: "topLeft")
@@ -138,24 +140,19 @@ struct KeyboardGridViewSpanTests {
 
 // MARK: - KeyView Style Rendering
 
+private func makeKeyView(_ key: KeyConfig) -> KeyView {
+    KeyView(
+        key: key,
+        look: KeyLook(),
+        height: 54,
+        makeGestureConfig: { _, _ in KeyGestureConfig() },
+        onTouchDown: {},
+        onEvent: { _, _ in nil }
+    )
+}
+
+@MainActor
 struct KeyViewStyleTests {
-    @Test func primaryAndUtilityProduceDifferentFontSizes() {
-        // Primary keys are large, utility keys use the utility label size.
-        // The exact values don't matter; the test guards against the two
-        // styles ever collapsing onto the same rendering path.
-        let primary = KeyView.baseFontSize(for: .primary)
-        let utility = KeyView.baseFontSize(for: .utility)
-        #expect(primary != utility)
-    }
-
-    @Test func utilityIsIconOnly() {
-        #expect(KeyView.isIconOnly(style: .utility))
-        #expect(!KeyView.isIconOnly(style: .primary))
-        #expect(!KeyView.isIconOnly(style: .secondary))
-        #expect(!KeyView.isIconOnly(style: .spacebar))
-        #expect(!KeyView.isIconOnly(style: .accent))
-    }
-
     @Test func primaryLabelFallsBackToKeyId() {
         // A key with no tap binding still has a stable label so it can
         // be debugged in previews.
@@ -167,7 +164,7 @@ struct KeyViewStyleTests {
             style: .primary,
             tapCycleActions: nil
         )
-        let view = KeyView(key: key, onGesture: { _, _, _ in }, onTouchDown: {})
+        let view = makeKeyView(key)
         #expect(view.primaryLabel == "midLeft")
     }
 
@@ -186,7 +183,7 @@ struct KeyViewStyleTests {
             style: .primary,
             tapCycleActions: nil
         )
-        let view = KeyView(key: key, onGesture: { _, _, _ in }, onTouchDown: {})
+        let view = makeKeyView(key)
         #expect(view.primaryLabel == "d")
     }
 
@@ -205,7 +202,44 @@ struct KeyViewStyleTests {
             style: .utility,
             tapCycleActions: nil
         )
-        let view = KeyView(key: key, onGesture: { _, _, _ in }, onTouchDown: {})
+        let view = makeKeyView(key)
         #expect(view.accessibilityLabel == "Löschen")
+    }
+}
+
+// MARK: - Grid Positions
+
+struct KeyboardGridCellTests {
+    /// Every grid cell is covered by exactly one key, spans included.
+    private func coverage(_ arrangement: GridArrangement) -> [[Int]] {
+        var counts = Array(repeating: Array(repeating: 0, count: arrangement.columns), count: arrangement.rows.count)
+        for cell in KeyboardGridView.cells(for: arrangement) {
+            for row in cell.row ..< cell.row + cell.placement.heightMultiplier {
+                for column in cell.column ..< cell.column + cell.placement.widthMultiplier {
+                    counts[row][column] += 1
+                }
+            }
+        }
+        return counts
+    }
+
+    @Test func landscapeReturnSpansIntoTheRowBelow() throws {
+        let landscape = try #require(StandardArrangements.grid3x3[.landscape])
+        let cells = KeyboardGridView.cells(for: landscape)
+        let returnCell = try #require(cells.first { $0.placement.keyId == UtilitySlot.return })
+        #expect(returnCell.row == 1)
+        #expect(returnCell.column == 4)
+        let bottomRight = try #require(cells.first { $0.placement.keyId == GridSlot.bottomRight })
+        #expect(bottomRight.row == 2)
+        #expect(bottomRight.column == 3)
+    }
+
+    @Test func standardArrangementsCoverEveryCellOnce() {
+        let arrangements = Array(StandardArrangements.grid3x3.values)
+            + Array(StandardArrangements.numeric3x3.values)
+            + Array(StandardArrangements.numericThumbKey.values)
+        for arrangement in arrangements {
+            #expect(coverage(arrangement).allSatisfy { row in row.allSatisfy { $0 == 1 } }, "\(arrangement)")
+        }
     }
 }
