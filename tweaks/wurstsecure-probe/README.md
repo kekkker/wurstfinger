@@ -42,6 +42,17 @@ text-document proxy; codes expire after five minutes. See `OTPCandidateOverlay.x
 (host side, captures the candidate) and `OTPKeyboardBridge.xm` (extension side,
 renders and inserts it).
 
+### Runs text commands for the keyboard
+
+Keyboard extensions cannot select text, select all, undo or redo through
+`UITextDocumentProxy`. Wurstfinger posts these as a Darwin notification
+(`de.akator.wurstfinger.text-command.v1`) whose 64-bit state carries the
+command, and WurstSecure runs it on the first responder of the app in front:
+select all, undo, redo, slide-to-select from an anchor, select the current
+line, and jumps to line and document boundaries. In the keyboard's own process
+it sets `WURSTSECURE_TEXT_BRIDGE=1` so Wurstfinger knows a receiver exists and
+falls back to context-based behavior otherwise.
+
 Password fields keep their original `secureTextEntry` value, so masking remains
 enabled. SpringBoard, passcode, lock-screen, pre-boot, CoreAuth, and Setup
 Assistant processes are explicitly excluded.
@@ -53,6 +64,7 @@ Assistant processes are explicitly excluded.
 | `Tweak.xm` | Keyboard forcing, spell-check enablement, bottom-strip removal, dock hiding. |
 | `OTPCandidateOverlay.xm` | Host-side: intercepts the Messages OTP candidate and publishes the code to the extension. |
 | `OTPKeyboardBridge.xm` | Extension-side: receives the code, shows it in the suggestion strip, inserts on tap. |
+| `TextCommandBridge.xm` | Host-side: runs the keyboard's select-all, undo/redo and selection commands on the focused input. |
 | `WurstSecure.plist` | MobileSubstrate filter — loads into UIKit apps and the Wurstfinger extension. |
 
 ## Keyboard-side companion changes

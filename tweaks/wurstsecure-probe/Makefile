@@ -5,7 +5,7 @@ THEOS_PACKAGE_SCHEME = rootless
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = WurstSecure
-WurstSecure_FILES = Tweak.xm OTPCandidateOverlay.xm OTPKeyboardBridge.xm
+WurstSecure_FILES = Tweak.xm OTPCandidateOverlay.xm OTPKeyboardBridge.xm TextCommandBridge.xm
 WurstSecure_CFLAGS = -fobjc-arc
 WurstSecure_FRAMEWORKS = UIKit Foundation
 
